@@ -1,0 +1,185 @@
+{
+  "id": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topics": [
+    {
+      "id": "phy_measurements",
+      "title": "Measurements II",
+      "description": "Choosing instruments, reading scales, and recording quantities with units.",
+      "lessons": [
+        {
+          "id": "phy_measurements_intro",
+          "title": "Making careful measurements",
+          "readTimeMinutes": 5,
+          "sections": [
+            {"heading": "Quantities and units", "body": "A measurement gives a number and a unit. Use an appropriate instrument and record the unit every time. Common SI units include metre (m) for length, kilogram (kg) for mass, second (s) for time, kelvin (K) for thermodynamic temperature, and ampere (A) for electric current. A ruler, measuring cylinder, balance, stopwatch, and thermometer measure different quantities."},
+            {"heading": "Reading instruments", "body": "Check the instrument's scale and zero before measuring. Read a liquid scale at eye level to reduce parallax error. Record a sensible number of digits: extra digits that the scale cannot support do not make a result more accurate. Repeat measurements when possible and compare them to spot unusual readings."}
+          ],
+          "keyTerms": [
+            {"term": "SI unit", "definition": "A unit defined in the International System of Units."},
+            {"term": "Parallax error", "definition": "A reading error caused by viewing a scale from an angle instead of at eye level."},
+            {"term": "Resolution", "definition": "The smallest change an instrument scale can show."}
+          ],
+          "questions": [
+            {"id": "phy_measurements_q1", "prompt": "What is the SI unit of mass?", "options": ["Metre", "Kilogram", "Newton", "Litre"], "correctOptionIndex": 1, "explanation": "The kilogram (kg) is the SI base unit of mass. A newton is a unit of force."},
+            {"id": "phy_measurements_q2", "prompt": "Why should a liquid scale be read at eye level?", "options": ["To reduce parallax error", "To increase the liquid temperature", "To change the scale spacing", "To remove the need for units"], "correctOptionIndex": 0, "explanation": "Viewing the meniscus at eye level helps avoid an apparent shift in its position called parallax error."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phy_investigations",
+      "title": "Scientific investigations",
+      "description": "Fair tests, variables, repeated readings, tables, and graphs.",
+      "lessons": [
+        {
+          "id": "phy_investigations_intro",
+          "title": "Planning a fair test",
+          "readTimeMinutes": 5,
+          "sections": [
+            {"heading": "Variables", "body": "A scientific investigation begins with a question that can be tested. The independent variable is the factor deliberately changed. The dependent variable is measured. Control variables are kept the same so that the effect of the independent variable can be judged fairly."},
+            {"heading": "Recording evidence", "body": "Use a results table with headings and units. Repeat measurements where practical; repeated readings help reveal random variation and make an average more useful. Choose a graph that fits the data, label both axes with quantities and units, and use a suitable scale. Describe what the evidence shows without claiming more than the measurements support."}
+          ],
+          "keyTerms": [
+            {"term": "Independent variable", "definition": "The factor deliberately changed in an investigation."},
+            {"term": "Dependent variable", "definition": "The measured result that may change when the independent variable changes."},
+            {"term": "Control variable", "definition": "A factor kept the same to make a comparison fair."}
+          ],
+          "questions": [
+            {"id": "phy_investigations_q1", "prompt": "A student changes the length of a wire and measures its resistance. What is the independent variable?", "options": ["Resistance", "Wire length", "The balance used", "The graph scale"], "correctOptionIndex": 1, "explanation": "The independent variable is the factor deliberately changed: the wire length."},
+            {"id": "phy_investigations_q2", "prompt": "Why repeat a measurement when practical?", "options": ["To make the unit disappear", "To identify variation and improve confidence in the result", "To guarantee every result is identical", "To change the independent variable"], "correctOptionIndex": 1, "explanation": "Repeated readings help identify random variation and support a more reliable summary, such as an average."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phy_kinetic_theory",
+      "title": "Kinetic theory of matter",
+      "description": "A particle model for solids, liquids, gases, and changes of state.",
+      "lessons": [
+        {
+          "id": "phy_kinetic_theory_intro",
+          "title": "Matter as moving particles",
+          "readTimeMinutes": 6,
+          "sections": [
+            {"heading": "The particle model", "body": "The kinetic theory models matter as tiny particles in continual motion. In a solid, particles are close together and vibrate about fixed positions. In a liquid, they remain close but can move past one another. In a gas, particles are far apart and move rapidly in random directions."},
+            {"heading": "Heating and changes of state", "body": "Heating usually transfers energy to particles. Their average kinetic energy rises when temperature rises. A substance can also change state: melting changes a solid to a liquid, boiling changes a liquid to a gas, and condensation changes a gas to a liquid. During a pure substance's change of state, energy can change particle arrangement even while temperature stays constant."}
+          ],
+          "keyTerms": [
+            {"term": "Kinetic energy", "definition": "Energy an object or particle has because of its motion."},
+            {"term": "Melting", "definition": "Change of state from solid to liquid."},
+            {"term": "Condensation", "definition": "Change of state from gas to liquid."}
+          ],
+          "questions": [
+            {"id": "phy_kinetic_theory_q1", "prompt": "How do particles in a solid mainly move?", "options": ["They vibrate about fixed positions", "They move freely far apart", "They stop moving completely", "They flow past one another like a liquid"], "correctOptionIndex": 0, "explanation": "In the particle model, solid particles are closely packed and vibrate about fixed positions."},
+            {"id": "phy_kinetic_theory_q2", "prompt": "What is condensation?", "options": ["Solid changing to liquid", "Liquid changing to gas", "Gas changing to liquid", "Liquid changing to solid"], "correctOptionIndex": 2, "explanation": "Condensation is the change of state from gas to liquid."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phy_thermometry",
+      "title": "Thermometry",
+      "description": "Temperature, thermometer readings, and calibration ideas.",
+      "lessons": [
+        {
+          "id": "phy_thermometry_intro",
+          "title": "Measuring temperature",
+          "readTimeMinutes": 5,
+          "sections": [
+            {"heading": "Temperature", "body": "Temperature describes how hot or cold a body is and is related to the average kinetic energy of its particles. Heat is energy transferred because of a temperature difference; it is not the same quantity as temperature. A thermometer works by using a property that changes predictably with temperature, such as the volume of a liquid or electrical resistance."},
+            {"heading": "Scales and safe readings", "body": "The Celsius scale is commonly used in everyday measurements. Temperature differences in degrees Celsius have the same size as differences in kelvins. For gas-law calculations, use absolute temperature in kelvins: temperature in K equals temperature in °C plus 273.15. Choose a thermometer with a suitable range and read it carefully."}
+          ],
+          "keyTerms": [
+            {"term": "Thermometric property", "definition": "A measurable property that changes in a predictable way with temperature."},
+            {"term": "Kelvin", "definition": "The SI unit of thermodynamic temperature."},
+            {"term": "Calibration", "definition": "Marking or adjusting an instrument against known reference values."}
+          ],
+          "questions": [
+            {"id": "phy_thermometry_q1", "prompt": "What is a thermometric property?", "options": ["A property that changes predictably with temperature", "A unit of force", "A way to measure mass only", "A method for reducing pressure"], "correctOptionIndex": 0, "explanation": "A thermometer uses a measurable property that changes predictably with temperature."},
+            {"id": "phy_thermometry_q2", "prompt": "What temperature is 27 °C in kelvins, approximately?", "options": ["246 K", "273 K", "300 K", "327 K"], "correctOptionIndex": 2, "explanation": "Convert using K = °C + 273.15. Thus 27 °C is about 300 K."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phy_pressure",
+      "title": "Pressure",
+      "description": "Pressure as force per unit area and pressure in fluids.",
+      "lessons": [
+        {
+          "id": "phy_pressure_intro",
+          "title": "Understanding pressure",
+          "readTimeMinutes": 5,
+          "sections": [
+            {"heading": "Force and area", "body": "Pressure is the normal force acting per unit area: pressure = force ÷ area. Its SI unit is the pascal (Pa), equal to one newton per square metre. For the same force, a smaller contact area produces a greater pressure. This helps explain why a sharp blade cuts more easily than a blunt one."},
+            {"heading": "Pressure in liquids", "body": "Pressure in a liquid increases with depth because more liquid is above the point. For a liquid of density ρ at depth h, the pressure due to the liquid is p = ρgh, where g is gravitational field strength. This expression gives gauge pressure; total pressure can also include pressure at the surface."}
+          ],
+          "keyTerms": [
+            {"term": "Pressure", "definition": "Normal force per unit area, measured in pascals."},
+            {"term": "Pascal", "definition": "The SI unit of pressure: one newton per square metre."},
+            {"term": "Gauge pressure", "definition": "Pressure measured relative to the surrounding atmospheric pressure."}
+          ],
+          "questions": [
+            {"id": "phy_pressure_q1", "prompt": "A force of 20 N acts on an area of 4 m². What pressure is produced?", "options": ["5 Pa", "16 Pa", "24 Pa", "80 Pa"], "correctOptionIndex": 0, "explanation": "Pressure = force ÷ area = 20 N ÷ 4 m² = 5 N/m², or 5 Pa."},
+            {"id": "phy_pressure_q2", "prompt": "What happens to liquid pressure as depth increases?", "options": ["It generally increases", "It becomes zero", "It always stays the same", "It changes into force"], "correctOptionIndex": 0, "explanation": "Deeper points have more liquid above them, so the pressure due to the liquid is greater."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phy_gas_laws",
+      "title": "Gas laws",
+      "description": "How gas pressure, volume, and temperature are related under stated conditions.",
+      "lessons": [
+        {
+          "id": "phy_gas_laws_intro",
+          "title": "Pressure, volume, and temperature of gases",
+          "readTimeMinutes": 6,
+          "sections": [
+            {"heading": "Boyle's law", "body": "For a fixed amount of gas at constant temperature, pressure is inversely proportional to volume. If the volume is halved, the pressure doubles, provided the gas remains at the same temperature. This relationship can be written pV = constant for that fixed sample and temperature."},
+            {"heading": "Charles's law and kelvins", "body": "For a fixed amount of gas at constant pressure, volume is proportional to its absolute temperature. Use kelvins, not degrees Celsius, in this relationship: V/T = constant. These simple gas-law relationships apply under their stated conditions and are useful models for many classroom problems."}
+          ],
+          "keyTerms": [
+            {"term": "Boyle's law", "definition": "For a fixed amount of gas at constant temperature, pressure is inversely proportional to volume."},
+            {"term": "Absolute temperature", "definition": "Temperature measured from absolute zero, using the kelvin scale."},
+            {"term": "Fixed amount of gas", "definition": "A sample whose number of gas particles does not change during the comparison."}
+          ],
+          "questions": [
+            {"id": "phy_gas_laws_q1", "prompt": "At constant temperature, what happens to gas pressure if the volume is reduced to half?", "options": ["It is halved", "It doubles", "It stays exactly the same", "It becomes zero"], "correctOptionIndex": 1, "explanation": "Boyle's law says pressure is inversely proportional to volume for a fixed gas sample at constant temperature."},
+            {"id": "phy_gas_laws_q2", "prompt": "Which temperature scale should be used in a simple Charles's law calculation?", "options": ["Degrees Celsius", "Kelvins", "Degrees Fahrenheit", "Any scale without conversion"], "correctOptionIndex": 1, "explanation": "Charles's law uses absolute temperature, measured in kelvins."}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phy_scalars_vectors",
+      "title": "Scalar and vector quantities",
+      "description": "Distinguishing quantities with magnitude only from those with direction.",
+      "lessons": [
+        {
+          "id": "phy_scalars_vectors_intro",
+          "title": "Magnitude and direction",
+          "readTimeMinutes": 5,
+          "sections": [
+            {"heading": "Scalars", "body": "A scalar quantity has magnitude (size) only. Examples include distance, speed, mass, time, and temperature. A scalar can be described with a number and unit, such as a journey of 4 km or a time of 20 s."},
+            {"heading": "Vectors", "body": "A vector quantity has both magnitude and direction. Examples include displacement, velocity, acceleration, force, and weight. Distance measures the path travelled, while displacement is the straight-line change in position in a stated direction. When vectors act along one line, choose a positive direction and combine them with signs."}
+          ],
+          "keyTerms": [
+            {"term": "Scalar", "definition": "A quantity described by magnitude only."},
+            {"term": "Vector", "definition": "A quantity described by magnitude and direction."},
+            {"term": "Displacement", "definition": "Change in position in a specified direction."}
+          ],
+          "questions": [
+            {"id": "phy_scalars_vectors_q1", "prompt": "Which quantity is a vector?", "options": ["Mass", "Time", "Velocity", "Temperature"], "correctOptionIndex": 2, "explanation": "Velocity has magnitude and direction, so it is a vector."},
+            {"id": "phy_scalars_vectors_q2", "prompt": "What extra information does a vector include compared with a scalar?", "options": ["Direction", "A second unit", "A larger number", "A graph"], "correctOptionIndex": 0, "explanation": "A vector is described by both magnitude and direction; a scalar has magnitude only."}
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -10,7 +10,9 @@ Noor should help secondary-school students in Malawi learn and revise curriculum
 4. Review topics that need another try.
 5. See progress and choose a useful next step.
 
-The current app screens are a visual scaffold. The sample learner, subjects, progress figures, and biology question are illustrative, not verified curriculum content.
+The `feature/android-scaffold` branch now implements the v0.1.0 Form 3 pilot loop for Biology and Physics: downloadable offline packs, short lessons, explained multiple-choice practice, local review scheduling, on-device progress, and basic storage/text-size settings. The starter packs contain six Biology topics and seven Physics topics, each with one short lesson and two questions.
+
+**Current status:** the code and draft packs are not yet an approved classroom pilot. Topic scope is provisional, the current official syllabus documents have not been verified, and no Malawi teacher has reviewed the lessons. CI and manual Android/offline device checks must pass before calling the alpha exit gate complete. See [`content scope and sources`](content/form3-scope.md) and [`versioning policy`](versioning.md).
 
 ## Product principles
 
@@ -20,9 +22,9 @@ The current app screens are a visual scaffold. The sample learner, subjects, pro
 - **Accessible on everyday phones:** test on lower-cost Android devices, slow connections, small screens, and limited storage. Make text readable and controls easy to tap.
 - **Encouraging, not pressuring:** use useful feedback and private progress, not public rankings or punitive streaks.
 
-## Phase 0 — agree the pilot and foundations (now)
+## Phase 0 — agree the pilot and foundations (scope selected; review still open)
 
-Decide the initial student group and content scope before writing a large library. Confirm the curriculum and exam references to use, content licensing, who will review lessons, preferred language(s), and what devices/connectivity the pilot should support. Start narrow: one form and one or two subjects, selected with students or local educators.
+The initial scope is Form 3 Biology and Physics, English-first, account-free, and offline-capable. Before writing a large library, confirm the current curriculum and exam references, content licensing, who will review lessons, preferred language(s), and what devices/connectivity the pilot should support.
 
 Prepare the content model and local storage so a lesson pack can be updated without requiring students to be online. Write a simple content-review checklist for correctness, clarity, language, and rights to any diagrams or past-paper questions. Decide what feedback can be collected without identifying a child.
 
@@ -32,7 +34,7 @@ The scaffold currently declares `versionName = 0.1.0` and `versionCode = 1`. Kee
 
 The current Actions workflow is for CI and short-lived debug APK artifacts. Before distributing builds beyond the development team, add a release workflow that builds a signed APK/AAB from a version tag, stores signing credentials only in GitHub Secrets, creates release notes, and keeps debug and release builds clearly separate.
 
-**Exit gate:** pilot form, subject(s), language, curriculum source, teacher reviewer, device expectations, and privacy approach are agreed.
+**Exit gate:** Form 3, Biology, Physics, English-first, and the account-free privacy approach are selected. The current official curriculum source, named teacher reviewer, content-rights policy, and device expectations remain to be confirmed.
 
 ## Phase 1 — MVP / closed alpha
 
@@ -107,13 +109,13 @@ Social features, open chat, public leaderboards, live video, and ad-based moneti
 
 ## GitHub and release workflow
 
-Continue using feature branches, Pull Requests, Issues, Dependabot, and the Android CI workflow. CI currently builds a debug APK and keeps its artifact for seven days. GitHub rejected branch protection for this private repository with a message that GitHub Pro or a public repository is required; keep the repository private and review the passing CI result manually unless the plan changes. Do not make the repository public just to enable a setting.
+Continue using feature branches, Pull Requests, Issues, Dependabot, and the Android CI workflow. The repository is public by the owner’s choice. `main` is protected: Pull Requests and a passing `android-verify-build` check are required, conversations must be resolved, administrators are included, and force pushes/deletions are blocked. CI validates lesson-pack structure and checksums, runs unit tests, builds a debug APK, and keeps the artifact for seven days. Release signing is not configured.
 
-## Decisions needed before the first real content pack
+## Remaining decisions before a classroom pilot
 
-1. Which form should the pilot support first: Form 1, 2, 3, or 4?
-2. Which subject should lead, and what is the first topic students struggle with?
-3. Should the MVP be English-only, or should Chichewa be included from the first content pack?
-4. Is Noor primarily for day-to-day lesson support, exam preparation, or both?
+1. Who will review the Biology and Physics packs, and what corrections are needed?
+2. Which current official syllabus and exam documents define the Form 3 scope?
+3. Is English sufficient for the first pilot, or should later packs include Chichewa?
+4. Which lower-cost Android phones, screen sizes, and connectivity conditions should be used for manual testing?
 
-Recommended default until these are decided: account-free, English-first, offline-capable MVP; select one form and one or two subjects with a local teacher and students before creating substantial content.
+Recommended next step: obtain the official curriculum documents and ask a Malawi Biology and Physics teacher to review the draft packs before expanding coverage or calling the app classroom-ready.
