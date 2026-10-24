@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest a learning or app feature for Noor.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What student need would this help with?
+      description: Describe the problem or learning need.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Noor to do?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Any examples or context?
+      description: Add references, constraints, or acceptance details.
+    validations:
+      required: false
