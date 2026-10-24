@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Noor" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:statusBarColor">#F7F5EC</item>
+        <item name="android:navigationBarColor">#F7F5EC</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

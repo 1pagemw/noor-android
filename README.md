@@ -1,21 +1,25 @@
 # Noor Android
 
-A native Android learning app for secondary school students in Malawi. The first screens will follow the visual concepts in [`docs/design/`](docs/design/) and the palette and component guidance in [`docs/design-system.md`](docs/design-system.md).
+Noor is a native Android learning app for secondary school students in Malawi. This first Compose scaffold follows the modern visual concepts in [`docs/design/`](docs/design/) and the palette in [`docs/design-system.md`](docs/design-system.md).
 
 ## Development environment
 
-Open this repository in GitHub Codespaces. The dev container provides Java 17, Gradle tooling, Kotlin and GitHub Copilot editor support. Android SDK command-line tools can be installed from the Codespace terminal with:
+Open the repository in GitHub Codespaces. The dev container provides Java 17, Gradle tooling, Kotlin and GitHub Copilot editor support. The Android SDK installer is available in `.devcontainer/install-android-sdk.sh`; run it in the Codespace terminal when ready. It asks you to review and accept Google Android SDK licenses interactively. Do not run it unless you agree to those license terms.
+
+The Codespace is for editing and building. For device checks, download the debug APK from the `noor-debug-apk` artifact on a successful GitHub Actions run and install it on an Android phone.
+
+## Build and test
 
 ```bash
-bash .devcontainer/install-android-sdk.sh
+./gradlew testDebugUnitTest assembleDebug
 ```
 
-The script asks you to review and accept Google Android SDK licenses interactively before it installs Android platform packages. Do not run it unless you agree to those license terms. The installed SDK is for building; this Codespace is not configured to run an Android emulator. We’ll use a physical Android phone to install and review debug APKs as the app takes shape.
+The Android CI workflow runs on pushes to `main` and `feature/**`, on pull requests into `main`, and through manual workflow dispatch. It runs unit tests, builds a debug APK, and stores the APK artifact for seven days.
 
 ## GitHub workflow
 
-Use Issues to track features and bugs. Work on a feature branch, then open a Pull Request into `main` so changes can be reviewed. GitHub Actions build and release workflows will be added when the initial Android Gradle project is in place.
+Track bugs and feature requests with Issues. Work in a feature branch and open a Pull Request to `main`. Dependabot checks Gradle and GitHub Actions dependencies weekly. Avoid storing signing keys or passwords in the repository; signed release builds will use GitHub Secrets when release publishing is added.
 
-## Project status
+## Current scaffold
 
-This repository currently contains environment setup and visual design references. Product behavior, curriculum scope, supported Android versions, and app data requirements are still to be agreed before feature implementation.
+The app includes a four-tab shell (Today, Learn, Review, Progress), sample subject rows, and a sample biology quiz/feedback flow. Names, topics, and progress figures are illustrative only. They are not real student data or confirmation of curriculum alignment. The app does not yet have persistent storage, authentication, downloaded lessons, or official curriculum content.
