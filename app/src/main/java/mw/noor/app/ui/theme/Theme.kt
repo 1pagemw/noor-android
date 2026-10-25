@@ -4,8 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import mw.noor.app.R
 
 private val NoorLightColorScheme = lightColorScheme(
     primary = NoorColors.Moss,
@@ -22,7 +25,14 @@ private val NoorLightColorScheme = lightColorScheme(
     onSurfaceVariant = NoorColors.MossDark,
 )
 
-private val NoorTypography = Typography().let { defaults ->
+private val NoorFontFamily = FontFamily(
+    Font(R.font.atkinson_hyperlegible_next_regular, FontWeight.Normal),
+    Font(R.font.atkinson_hyperlegible_next_medium, FontWeight.Medium),
+    Font(R.font.atkinson_hyperlegible_next_semibold, FontWeight.SemiBold),
+    Font(R.font.atkinson_hyperlegible_next_bold, FontWeight.Bold),
+)
+
+private val NoorTypography = Typography(defaultFontFamily = NoorFontFamily).let { defaults ->
     defaults.copy(
         displayLarge = defaults.displayLarge.copy(fontSize = 48.sp, lineHeight = 56.sp, fontWeight = FontWeight.Bold),
         displayMedium = defaults.displayMedium.copy(fontSize = 40.sp, lineHeight = 48.sp, fontWeight = FontWeight.Bold),
