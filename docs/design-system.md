@@ -4,18 +4,17 @@ This is the starting visual system based on the selected modern screen concepts.
 
 ## Color palette
 
-- **Moss** `#2E6B4F`: primary actions, selected states, progress, and key emphasis.
+- **Forest green** `#2E6B4E`: primary actions, selected states, progress, and key emphasis.
 - **Deep moss** `#1F4D37`: high-contrast green surfaces and pressed/emphasized states.
 - **Mint** `#DCEBDD`: selected rows, supportive information panels, and soft secondary surfaces.
-- **Warm off-white** `#F7F5EC`: primary app canvas.
+- **Warm cream** `#F6F3EA`: primary app canvas.
 - **Ink** `#15181E`: main text and high-contrast icons.
-- **Sun** `#F5C451`: sparing highlight for a small cue or emphasis; never a second dominant color.
 
-Use ink on light surfaces and white or warm off-white on dark green surfaces. Keep status meaning clear without relying on color alone. Avoid adding coral or violet to this first palette.
+Use ink on light surfaces and white or warm cream on dark green surfaces. Keep status meaning clear without relying on color alone. Avoid introducing additional accent colors.
 
 ## Typography and spacing
 
-Use a clean sans-serif family with a distinct display weight for page titles and strong, legible body text. Keep titles short, use sentence case, and preserve comfortable reading width. Build spacing from a consistent 4/8-point scale. Controls should have generous touch areas and clear selected, disabled, and pressed states.
+Use a clean sans-serif family with bold page titles, semibold section headings, and regular or medium body text. Lesson paragraphs use a comfortable 24sp line height. Keep titles short, use sentence case, and preserve readable wrapping. Build spacing from a consistent 4/8-point scale. Controls retain generous touch areas and clear selected, disabled, and pressed states.
 
 ## Component direction
 

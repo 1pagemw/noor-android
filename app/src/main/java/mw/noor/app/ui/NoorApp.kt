@@ -2,22 +2,26 @@ package mw.noor.app.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowForward
@@ -61,11 +65,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import mw.noor.app.BuildConfig
 import mw.noor.app.data.ContentCatalogEntry
@@ -73,7 +83,6 @@ import mw.noor.app.data.ContentLesson
 import mw.noor.app.data.ContentPack
 import mw.noor.app.data.ContentTopic
 import mw.noor.app.data.NoorRepository
-import mw.noor.app.data.ProgressSummary
 import mw.noor.app.data.TopicProgress
 import mw.noor.app.ui.theme.NoorColors
 import java.util.Locale
@@ -95,16 +104,25 @@ fun NoorApp() {
 
     var setupComplete by remember { mutableStateOf(repository.isSetupComplete()) }
     var selectedTabName by rememberSaveable { mutableStateOf(NoorTab.TODAY.name) }
-    var route by rememberSaveable { mutableStateOf("tabs") }
+    var encodedNavigationState by rememberSaveable { mutableStateOf(RouteHistory.initial().encode()) }
     var selectedPackId by rememberSaveable { mutableStateOf("") }
     var selectedTopicId by rememberSaveable { mutableStateOf("") }
     var selectedLessonId by rememberSaveable { mutableStateOf("") }
-    var quizReturnRoute by rememberSaveable { mutableStateOf("lesson") }
     var dataVersion by remember { mutableIntStateOf(0) }
     var downloadingPackId by rememberSaveable { mutableStateOf("") }
     var downloadPercent by rememberSaveable { mutableIntStateOf(0) }
     var downloadError by rememberSaveable { mutableStateOf("") }
     var textScale by remember { mutableStateOf(repository.textScale()) }
+
+    val navigationState = remember(encodedNavigationState) { RouteHistory.decode(encodedNavigationState) }
+    val route = navigationState.currentRoute
+    val navigateTo: (String) -> Unit = { destination ->
+        encodedNavigationState = navigationState.navigateTo(destination).encode()
+    }
+    val navigateBack: () -> Unit = {
+        encodedNavigationState = navigationState.navigateBack().encode()
+    }
+    BackHandler(enabled = route != "tabs") { navigateBack() }
 
     val baseDensity = LocalDensity.current
     val adjustedDensity = remember(baseDensity.density, baseDensity.fontScale, textScale) {
@@ -133,7 +151,7 @@ fun NoorApp() {
                         textScale = it
                         repository.setTextScale(it)
                     },
-                    onBack = { route = "tabs" },
+                    onBack = navigateBack,
                     onDataChanged = { dataVersion += 1 },
                 )
                 "subject" -> if (currentPackEntry != null) {
@@ -144,7 +162,7 @@ fun NoorApp() {
                         downloadingPackId = downloadingPackId,
                         downloadPercent = downloadPercent,
                         downloadError = downloadError,
-                        onBack = { route = "tabs" },
+                        onBack = navigateBack,
                         onDownload = { entry ->
                             downloadError = ""
                             downloadingPackId = entry.id
@@ -164,12 +182,11 @@ fun NoorApp() {
                             selectedTopicId = topic.id
                             selectedLessonId = lesson.id
                             repository.saveLastLesson(mw.noor.app.data.LastLesson(currentPackEntry.id, topic.id, lesson.id))
-                            route = "lesson"
+                            navigateTo("lesson")
                         },
                         onStartQuiz = { topic ->
                             selectedTopicId = topic.id
-                            quizReturnRoute = "subject"
-                            route = "quiz"
+                            navigateTo("quiz")
                         },
                     )
                 } else {
@@ -182,22 +199,20 @@ fun NoorApp() {
                         onSelectTab = { selectedTabName = it },
                         onOpenPack = { entry ->
                             selectedPackId = entry.id
-                            selectedTabName = NoorTab.LEARN.name
-                            route = "subject"
+                            navigateTo("subject")
                         },
-                        onOpenSettings = { route = "settings" },
+                        onOpenSettings = { navigateTo("settings") },
                         onStartReview = { entry, topic ->
                             selectedPackId = entry.id
                             selectedTopicId = topic.id
-                            quizReturnRoute = "tabs"
                             selectedTabName = NoorTab.REVIEW.name
-                            route = "quiz"
+                            navigateTo("quiz")
                         },
                         onContinueLesson = { last ->
                             selectedPackId = last.packId
                             selectedTopicId = last.topicId
                             selectedLessonId = last.lessonId
-                            route = "lesson"
+                            navigateTo("lesson")
                         },
                     )
                 }
@@ -207,30 +222,29 @@ fun NoorApp() {
                         topic = currentTopic,
                         lesson = currentLesson,
                         repository = repository,
-                        onBack = { route = "subject" },
+                        onBack = navigateBack,
                         onStartQuiz = {
-                            quizReturnRoute = "lesson"
-                            route = "quiz"
+                            navigateTo("quiz")
                         },
                         onProgressChanged = { dataVersion += 1 },
                     )
                 } else {
-                    MissingContentScreen(onBack = { route = "tabs" })
+                    MissingContentScreen(onBack = navigateBack)
                 }
                 "quiz" -> if (currentTopic != null && currentPack != null) {
                     QuizScreen(
                         pack = currentPack,
                         topic = currentTopic,
                         repository = repository,
-                        onBack = { route = quizReturnRoute },
+                        onBack = { navigateBack() },
                         onFinished = { correct, total ->
                             repository.recordQuizResult(currentTopic.id, correct, total)
                             dataVersion += 1
-                            route = quizReturnRoute
+                            navigateBack()
                         },
                     )
                 } else {
-                    MissingContentScreen(onBack = { route = "tabs" })
+                    MissingContentScreen(onBack = navigateBack)
                 }
                 else -> LearningTabs(
                     selectedTabName = selectedTabName,
@@ -241,22 +255,20 @@ fun NoorApp() {
                     onSelectTab = { selectedTabName = it },
                     onOpenPack = { entry ->
                         selectedPackId = entry.id
-                        selectedTabName = NoorTab.LEARN.name
-                        route = "subject"
+                        navigateTo("subject")
                     },
-                    onOpenSettings = { route = "settings" },
+                    onOpenSettings = { navigateTo("settings") },
                     onStartReview = { entry, topic ->
                         selectedPackId = entry.id
                         selectedTopicId = topic.id
-                        quizReturnRoute = "tabs"
                         selectedTabName = NoorTab.REVIEW.name
-                        route = "quiz"
+                        navigateTo("quiz")
                     },
                     onContinueLesson = { last ->
                         selectedPackId = last.packId
                         selectedTopicId = last.topicId
                         selectedLessonId = last.lessonId
-                        route = "lesson"
+                        navigateTo("lesson")
                     },
                 )
             }
@@ -267,11 +279,11 @@ fun NoorApp() {
 @Composable
 private fun WelcomeScreen(onContinue: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(24.dp),
+        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.Start,
     ) {
-        Text("Noor", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = NoorColors.Moss)
+        Text("Noor", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
         Spacer(Modifier.height(8.dp))
         Text("Your Form 3 study companion", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
@@ -303,6 +315,7 @@ private fun LearningTabs(
     val selected = NoorTab.entries.firstOrNull { it.name == selectedTabName } ?: NoorTab.TODAY
     Scaffold(
         containerColor = NoorColors.Canvas,
+        contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
                 NoorTab.entries.forEach { tab ->
@@ -367,7 +380,7 @@ private fun TodayScreen(
 ) {
     ScreenColumn(modifier) {
         ScreenHeader(title = "Noor", subtitle = "Form 3 · Biology and Physics", onSettings = onOpenSettings)
-        Text("Small steps. Strong progress.", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+        Text("Small steps. Strong progress.", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         val lastLesson = repository.lastLesson()
         val continueEntry = lastLesson?.let { last -> entries.firstOrNull { it.id == last.packId } }
         val continuePack = continueEntry?.let(repository::loadPack)
@@ -375,10 +388,10 @@ private fun TodayScreen(
         val continueLesson = continueTopic?.lessons?.firstOrNull { it.id == lastLesson?.lessonId }
         if (continueEntry != null && continueTopic != null && continueLesson != null) {
             Surface(color = NoorColors.MossDark, shape = RoundedCornerShape(24.dp)) {
-                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("CONTINUE LEARNING", style = MaterialTheme.typography.labelMedium, color = NoorColors.Mint)
-                    Text("${continueEntry.subject} · ${continueTopic.title}", color = Color.White.copy(alpha = 0.86f))
-                    Text(continueLesson.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("${continueEntry.subject} · ${continueTopic.title}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.86f))
+                    Text(continueLesson.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = Color.White)
                     PrimaryButton(text = "Open lesson", onClick = { onContinueLesson(lastLesson!!) })
                 }
             }
@@ -389,7 +402,7 @@ private fun TodayScreen(
                 icon = Icons.Outlined.Download,
             )
         }
-        Text("Your Form 3 subjects", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Your Form 3 subjects", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         entries.forEach { entry ->
             PackCard(entry, downloaded = repository.loadPack(entry) != null, onClick = { onOpenPack(entry) })
         }
@@ -405,9 +418,21 @@ private fun LearnScreen(
     onOpenPack: (ContentCatalogEntry) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
+    val savedSubjects = entries.filter { repository.loadPack(it) != null }
+    val availableSubjects = entries.filter { repository.loadPack(it) == null }
+    val downloadMessage = when {
+        entries.isEmpty() -> "No subject packs are available yet."
+        savedSubjects.isEmpty() -> "Download ${availableSubjects.joinToString(" or ") { it.subject }} while connected. Saved packs can then be used offline."
+        availableSubjects.isEmpty() -> "All available subjects are saved offline: ${savedSubjects.joinToString(", ") { it.subject }}."
+        else -> "Saved offline: ${savedSubjects.joinToString(", ") { it.subject }}. Available to download: ${availableSubjects.joinToString(", ") { it.subject }}."
+    }
     ScreenColumn(modifier) {
         ScreenHeader("Learn", "Form 3 pilot packs", onOpenSettings)
-        Text("Download a subject once to keep its lessons on this phone.", style = MaterialTheme.typography.bodyLarge)
+        InfoCard(
+            title = if (availableSubjects.isEmpty() && savedSubjects.isNotEmpty()) "All subjects ready offline" else "Offline availability",
+            body = downloadMessage,
+            icon = if (availableSubjects.isEmpty() && savedSubjects.isNotEmpty()) Icons.Outlined.CheckCircle else Icons.Outlined.Download,
+        )
         entries.forEach { entry ->
             PackCard(entry, downloaded = repository.loadPack(entry) != null, onClick = { onOpenPack(entry) })
         }
@@ -435,7 +460,7 @@ private fun PackCard(entry: ContentCatalogEntry, downloaded: Boolean, onClick: (
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(entry.subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Form ${entry.form} · ${entry.topicCount} topics", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.7f))
+                Text("Form ${entry.form} · ${countLabel(entry.topicCount, "topic")}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.7f))
                 Text(if (downloaded) "Saved offline" else "About ${formatBytes(entry.sizeBytes)} · download to study offline", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
             }
             Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${entry.subject}", tint = NoorColors.Moss)
@@ -456,24 +481,24 @@ private fun SubjectScreen(
     onOpenLesson: (ContentTopic, ContentLesson) -> Unit,
     onStartQuiz: (ContentTopic) -> Unit,
 ) {
-    ScreenColumn(Modifier.fillMaxSize()) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader(title = entry.subject, subtitle = "Form ${entry.form}", onBack = onBack)
         Text(entry.description, style = MaterialTheme.typography.bodyLarge)
         InfoCard(entry.curriculumStatus, "These draft topics need local teacher review before classroom use.", Icons.Outlined.Info)
         if (pack == null) {
             Surface(color = NoorColors.MossDark, shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Save this pack for offline study", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
-                    Text("${entry.topicCount} topics · about ${formatBytes(entry.sizeBytes)}", color = NoorColors.Mint)
+                    Text("Save this pack for offline study", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    Text("${countLabel(entry.topicCount, "topic")} · about ${formatBytes(entry.sizeBytes)}", color = NoorColors.Mint)
                     if (downloadingPackId == entry.id) {
-                        LinearProgressIndicator(progress = { downloadPercent / 100f }, modifier = Modifier.fillMaxWidth(), color = NoorColors.Sun, trackColor = Color.White.copy(alpha = 0.24f))
+                        LinearProgressIndicator(progress = { downloadPercent / 100f }, modifier = Modifier.fillMaxWidth(), color = NoorColors.Mint, trackColor = Color.White.copy(alpha = 0.24f))
                         Text(if (downloadPercent == 0) "Connecting…" else "Downloading $downloadPercent%", color = Color.White)
                     } else {
                         Button(
                             onClick = { onDownload(entry) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Sun, contentColor = NoorColors.Ink),
+                            colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Mint, contentColor = NoorColors.MossDark),
                         ) {
                             Icon(Icons.Outlined.Download, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
@@ -485,7 +510,7 @@ private fun SubjectScreen(
             if (downloadError.isNotBlank()) InfoCard("Download not complete", downloadError, Icons.Outlined.Info)
             Text("Pack downloads use a small HTTPS file and are checked before saving.", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.7f))
         } else {
-            InfoCard("Available offline", "Version ${pack.contentVersion} · ${pack.topics.size} topics · stored on this phone", Icons.Outlined.CheckCircle)
+            InfoCard("Available offline", "Version ${pack.contentVersion} · ${countLabel(pack.topics.size, "topic")} · stored on this phone", Icons.Outlined.CheckCircle)
             pack.topics.forEach { topic ->
                 val topicProgress = repository.topicProgress(topic.id)
                 TopicCard(
@@ -543,41 +568,51 @@ private fun LessonScreen(
     onStartQuiz: () -> Unit,
     onProgressChanged: () -> Unit,
 ) {
-    val completed = lesson.id in repository.completedLessonIds()
-    ScreenColumn(Modifier.fillMaxSize()) {
+    var completed by remember(lesson.id) { mutableStateOf(lesson.id in repository.completedLessonIds()) }
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader(title = pack.subject, subtitle = topic.title, onBack = onBack)
         Text(lesson.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("About ${lesson.readTimeMinutes} minutes · Form ${pack.form}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+        Text("About ${countLabel(lesson.readTimeMinutes, "minute")} · Form ${pack.form}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
         InfoCard(pack.curriculumStatus, "Use this draft to study, and ask a teacher to verify syllabus details.", Icons.Outlined.Info)
         lesson.sections.forEach { section ->
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(section.heading, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = NoorColors.MossDark)
-                Text(section.body, style = MaterialTheme.typography.bodyLarge)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(section.heading, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = NoorColors.MossDark)
+                Text(section.body, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Normal, lineHeight = 24.sp))
             }
         }
         if (lesson.keyTerms.isNotEmpty()) {
-            Text("Key terms", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Key terms", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             lesson.keyTerms.forEach { term ->
-                Surface(color = NoorColors.Mint, shape = RoundedCornerShape(14.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, NoorColors.Mint)) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(term.term, fontWeight = FontWeight.SemiBold, color = NoorColors.MossDark)
                         Text(term.definition, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         }
-        Button(
-            onClick = {
-                repository.markLessonCompleted(lesson.id)
-                onProgressChanged()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (completed) NoorColors.Mint else NoorColors.Moss, contentColor = if (completed) NoorColors.MossDark else Color.White),
-        ) {
-            Icon(Icons.Outlined.Check, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(if (completed) "Lesson completed" else "Mark lesson complete")
+        if (completed) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = NoorColors.Moss, modifier = Modifier.size(18.dp))
+                Text("Lesson completed", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+            }
+        } else {
+            TextButton(
+                onClick = {
+                    repository.markLessonCompleted(lesson.id)
+                    completed = true
+                    onProgressChanged()
+                },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            ) {
+                Icon(Icons.Outlined.Check, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Mark lesson complete")
+            }
         }
         PrimaryButton(text = "Practise this topic", onClick = onStartQuiz)
     }
@@ -603,11 +638,11 @@ private fun ReviewScreen(
         } else if (dueTopics.isEmpty()) {
             InfoCard("Nothing is due right now", "A topic becomes due after a practice session. You can still practise any saved topic below.", Icons.Outlined.CheckCircle)
         } else {
-            Text("Due now · ${dueTopics.size} topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Due now · ${countLabel(dueTopics.size, "topic")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             dueTopics.forEach { (entry, topic) -> ReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
         }
         if (downloadedPacks.isNotEmpty()) {
-            Text(if (dueTopics.isEmpty()) "Practise a saved topic" else "Other saved topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(if (dueTopics.isEmpty()) "Practise a saved topic" else "Other saved topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             downloadedPacks.forEach { pack ->
                 val entry = entries.firstOrNull { it.id == pack.id } ?: return@forEach
                 pack.topics.filter { it.id !in dueIds }.forEach { topic -> ReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
@@ -647,15 +682,20 @@ private fun ProgressScreen(
     repository: NoorRepository,
     dataVersion: Int,
 ) {
-    val summary = repository.progressSummary(downloadedPacks)
+    val summary = remember(dataVersion, downloadedPacks) { repository.progressSummary(downloadedPacks) }
+    val completedLessonIds = remember(dataVersion) { repository.completedLessonIds() }
     ScreenColumn(modifier) {
         ScreenHeader("Your progress", "Stored on this phone")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard("${summary.completedLessons}/${summary.totalLessons}", "lessons complete", Modifier.weight(1f))
-            val accuracy = if (summary.answeredQuestions == 0) 0 else (summary.correctAnswers * 100 / summary.answeredQuestions)
-            MetricCard("$accuracy%", "practice accuracy", Modifier.weight(1f))
+            val accuracy = if (summary.answeredQuestions == 0) "—" else "${summary.correctAnswers * 100 / summary.answeredQuestions}%"
+            MetricCard(accuracy, "practice accuracy", Modifier.weight(1f))
         }
-        InfoCard("${summary.quizzesCompleted} practice sessions", "${summary.dueTopicIds.size} topics due for another look.", Icons.Outlined.BarChart)
+        InfoCard(
+            "${countLabel(summary.quizzesCompleted, "practice session")} completed",
+            "${countLabel(summary.dueTopicIds.size, "topic")} due for another look.",
+            Icons.Outlined.BarChart,
+        )
         if (downloadedPacks.isEmpty()) {
             InfoCard("Progress starts here", "Download Biology or Physics to see lesson and practice progress.", Icons.Outlined.Download)
         } else {
@@ -663,24 +703,36 @@ private fun ProgressScreen(
                 Text("${pack.subject} · Form ${pack.form}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 pack.topics.forEach { topic ->
                     val progress = repository.topicProgress(topic.id)
-                    val lessonDone = topic.lessons.count { it.id in repository.completedLessonIds() }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(topic.title, style = MaterialTheme.typography.bodyMedium)
-                            Text(if (progress == null) "$lessonDone/${topic.lessons.size} lesson complete · not practised" else "$lessonDone/${topic.lessons.size} lesson complete · last quiz ${progress.lastScorePercent}%", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                    val lessonDone = topic.lessons.count { it.id in completedLessonIds }
+                    val lessonTotal = topic.lessons.size
+                    val fractions = topicProgressFractions(lessonDone, lessonTotal, progress?.lastScorePercent)
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(topic.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Lessons", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.72f))
+                            Text("$lessonDone/$lessonTotal complete", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.72f))
                         }
-                        if (progress != null) Text("${progress.lastScorePercent}%", color = NoorColors.Moss, fontWeight = FontWeight.Bold)
+                        NoorProgressBar(
+                            fraction = fractions.lessonCompletion,
+                            description = "Lesson completion: $lessonDone of $lessonTotal",
+                        )
+                        if (progress == null) {
+                            Text("Quiz · Not practised", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                        } else {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Latest quiz", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.72f))
+                                Text("${progress.lastScorePercent}%", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark, fontWeight = FontWeight.SemiBold)
+                            }
+                            NoorProgressBar(
+                                fraction = fractions.latestQuizAccuracy ?: 0f,
+                                description = "Latest quiz score ${progress.lastScorePercent} percent",
+                            )
+                        }
                     }
-                    LinearProgressIndicator(
-                        progress = if (progress == null) lessonDone.toFloat() / topic.lessons.size.coerceAtLeast(1) else progress.lastScorePercent / 100f,
-                        modifier = Modifier.fillMaxWidth(),
-                        color = NoorColors.Moss,
-                        trackColor = NoorColors.Mint,
-                    )
+                    Spacer(Modifier.height(6.dp))
                 }
             }
         }
-        if (dataVersion < 0) Spacer(Modifier.height(1.dp))
     }
 }
 
@@ -694,7 +746,7 @@ private fun SettingsScreen(
     onDataChanged: () -> Unit,
 ) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
-    ScreenColumn(Modifier.fillMaxSize()) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Settings", "Form 3 pilot", onBack)
         InfoCard("No account", "Noor stores downloaded lessons and progress on this phone. Clearing app data or uninstalling removes them.", Icons.Outlined.Info)
         SettingLine("Form", "Form ${repository.selectedForm()} · this pilot includes Form 3")
@@ -704,7 +756,7 @@ private fun SettingsScreen(
             Slider(value = textScale, onValueChange = onTextScaleChange, valueRange = 0.9f..1.3f)
             Text("Uses your phone's display size, with an optional Noor adjustment.", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
         }
-        Text("Saved lesson packs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("Saved lesson packs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         val storedBytes = repository.downloadedBytes(entries)
         Text("${formatBytes(storedBytes)} stored by Noor", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
         entries.forEach { entry ->
@@ -768,10 +820,10 @@ private fun QuizScreen(
         return
     }
     if (showResult) {
-        ScreenColumn(Modifier.fillMaxSize()) {
+        ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
             BackHeader("Practice complete", topic.title, onBack)
-            Text("${correctCount * 100 / questions.size}%", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.ExtraBold, color = NoorColors.Moss)
-            Text("$correctCount of ${questions.size} correct", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("${correctCount * 100 / questions.size}%", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
+            Text("$correctCount of ${questions.size} correct", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             InfoCard(
                 title = when {
                     correctCount * 100 / questions.size >= 80 -> "Strong work"
@@ -787,11 +839,11 @@ private fun QuizScreen(
     }
 
     val question = questions[questionIndex]
-    ScreenColumn(Modifier.fillMaxSize()) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader(pack.subject, topic.title, onBack)
         Text("Question ${questionIndex + 1} of ${questions.size}", style = MaterialTheme.typography.bodyMedium, color = NoorColors.Ink.copy(alpha = 0.68f))
         LinearProgressIndicator(progress = (questionIndex + 1).toFloat() / questions.size, modifier = Modifier.fillMaxWidth(), color = NoorColors.Moss, trackColor = NoorColors.Mint)
-        Text(question.prompt, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(question.prompt, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         question.options.forEachIndexed { index, option ->
             val isSelected = index == selectedAnswer
             val isCorrectAnswer = answered && index == question.correctOptionIndex
@@ -846,7 +898,7 @@ private fun QuizScreen(
 
 @Composable
 private fun MissingContentScreen(onBack: () -> Unit) {
-    ScreenColumn(Modifier.fillMaxSize()) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Content unavailable", "", onBack)
         InfoCard("This lesson is not saved", "Return to Learn and download the subject pack while connected.", Icons.Outlined.Download)
         PrimaryButton("Back to Noor", onBack)
@@ -854,10 +906,15 @@ private fun MissingContentScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun ScreenColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+private fun ScreenColumn(
+    modifier: Modifier = Modifier,
+    safeDrawingInsets: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    val insets = if (safeDrawingInsets) Modifier.windowInsetsPadding(WindowInsets.safeDrawing) else Modifier
     Column(
-        modifier = modifier.fillMaxSize().background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = modifier.fillMaxSize().then(insets).background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) { content() }
 }
 
@@ -865,7 +922,7 @@ private fun ScreenColumn(modifier: Modifier = Modifier, content: @Composable () 
 private fun ScreenHeader(title: String, subtitle: String, onSettings: (() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = NoorColors.Ink)
+            Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = NoorColors.Ink)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
         }
         if (onSettings != null) IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = NoorColors.Moss) }
@@ -876,7 +933,7 @@ private fun ScreenHeader(title: String, subtitle: String, onSettings: (() -> Uni
 private fun BackHeader(title: String, subtitle: String, onBack: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
         IconButton(onClick = onBack) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = NoorColors.MossDark) }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.66f))
         }
@@ -886,11 +943,11 @@ private fun BackHeader(title: String, subtitle: String, onBack: () -> Unit) {
 @Composable
 private fun InfoCard(title: String, body: String, icon: ImageVector) {
     Surface(color = NoorColors.Mint, shape = RoundedCornerShape(18.dp)) {
-        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(icon, contentDescription = null, tint = NoorColors.MossDark, modifier = Modifier.size(22.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(icon, contentDescription = null, tint = NoorColors.MossDark, modifier = Modifier.size(20.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = NoorColors.MossDark)
-                Text(body, style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.78f))
+                Text(body, style = MaterialTheme.typography.bodyMedium, color = NoorColors.Ink.copy(alpha = 0.82f))
             }
         }
     }
@@ -928,6 +985,34 @@ private fun SettingLine(title: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodyMedium, color = NoorColors.Ink.copy(alpha = 0.72f))
     }
 }
+
+@Composable
+private fun NoorProgressBar(fraction: Float, description: String) {
+    val progress = normalizedProgressFraction(fraction)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .clip(CircleShape)
+            .background(NoorColors.Mint)
+            .semantics {
+                contentDescription = description
+                progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
+            },
+    ) {
+        if (progress > 0f) {
+            Box(
+                Modifier
+                    .fillMaxWidth(progress)
+                    .fillMaxSize()
+                    .background(NoorColors.Moss),
+            )
+        }
+    }
+}
+
+internal fun countLabel(count: Int, singular: String, plural: String = "${singular}s"): String =
+    "$count ${if (count == 1) singular else plural}"
 
 private fun formatBytes(bytes: Long): String = when {
     bytes < 1024L -> "$bytes B"
