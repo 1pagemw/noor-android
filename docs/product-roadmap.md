@@ -32,7 +32,7 @@ Prepare the content model and local storage so a lesson pack can be updated with
 
 The scaffold currently declares `versionName = 0.1.0` and `versionCode = 1`. Keep `versionName` semantic and human-readable (`0.1.x` for early pilot builds; `1.0.0` for the first stable public release). Increase Android `versionCode` monotonically for every distributable build so a newer test build can update an older one. Tag release source with matching Git tags such as `v0.1.0` and `v1.0.0`.
 
-The current Actions workflow is for CI and short-lived debug APK artifacts. Before distributing builds beyond the development team, add a release workflow that builds a signed APK/AAB from a version tag, stores signing credentials only in GitHub Secrets, creates release notes, and keeps debug and release builds clearly separate.
+The Actions workflow is for CI and debug APK artifacts. Repository builds use a stable development-only signing key from GitHub Secrets when available so newer development APKs can update earlier ones; this is not a production release key. Before distributing builds beyond the development team, add a separate release workflow that builds a signed APK/AAB from a version tag, creates release notes, and keeps debug and release builds clearly separate.
 
 **Exit gate:** Form 3, Biology, Physics, English-first, and the account-free privacy approach are selected. The current official curriculum source, named teacher reviewer, content-rights policy, and device expectations remain to be confirmed.
 
@@ -62,7 +62,7 @@ Run a time-bounded pilot with a small, consenting group of students and educator
 - Add search and a lightweight glossary if students need them in observed use.
 - Add more question formats only where useful and practical on phones (for example, numeric answers for mathematics after multiple-choice is reliable).
 - Add opt-in, local study reminders only if students and educators want them; reminders must be easy to turn off.
-- Provide a clear “report a content problem” route that does not expose student details publicly.
+- The MVP now includes a lesson-level report composer. It opens Android's share chooser with form, subject, topic, lesson, content version, and optional student-entered details; Noor does not send automatically or attach account/device identity. Define an official teacher destination and report-handling process before pilot use.
 - Improve pack updates, download recovery, storage warnings, and safe handling of an interrupted connection.
 - Test large text, contrast, screen readers, small screens, low storage, slow or intermittent data, and airplane-mode behavior.
 
@@ -109,7 +109,7 @@ Social features, open chat, public leaderboards, live video, and ad-based moneti
 
 ## GitHub and release workflow
 
-Continue using feature branches, Pull Requests, Issues, Dependabot, and the Android CI workflow. The repository is public by the owner’s choice. `main` is protected: Pull Requests and a passing `android-verify-build` check are required, conversations must be resolved, administrators are included, and force pushes/deletions are blocked. CI validates lesson-pack structure and checksums, runs unit tests, builds a debug APK, and keeps the artifact for seven days. Release signing is not configured.
+Continue using feature branches, Pull Requests, Issues, Dependabot, and the Android CI workflow. The repository is public by the owner’s choice. `main` is protected: Pull Requests and a passing `android-verify-build` check are required, conversations must be resolved, administrators are included, and force pushes/deletions are blocked. CI validates lesson-pack structure and checksums, runs unit tests, builds a debug APK, and keeps the artifact for seven days. Repository workflows use the development-only signing key when both Actions secrets are available; forked builds fall back to the runner's default debug key. No production release-signing workflow is configured.
 
 ## Remaining decisions before a classroom pilot
 

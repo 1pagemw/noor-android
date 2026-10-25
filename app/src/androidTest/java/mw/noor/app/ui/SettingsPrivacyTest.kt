@@ -1,9 +1,7 @@
 package mw.noor.app.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.fetchSemanticsNodes
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -20,10 +18,7 @@ class SettingsPrivacyTest {
 
     @Test
     fun settingsExplainLocalProgressStorageAndDeletion() {
-        val startButton = composeRule.onAllNodesWithText("Start learning")
-        if (startButton.fetchSemanticsNodes().isNotEmpty()) {
-            startButton[0].performClick()
-        }
+        composeRule.onNodeWithText("Start learning").performClick()
 
         composeRule.onNodeWithContentDescription("Settings").performClick()
         composeRule.onNodeWithText(

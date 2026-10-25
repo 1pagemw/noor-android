@@ -47,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -71,6 +72,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -78,6 +80,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import android.content.Intent
 import mw.noor.app.BuildConfig
 import mw.noor.app.data.ContentCatalogEntry
 import mw.noor.app.data.ContentLesson
@@ -155,6 +158,36 @@ fun NoorApp() {
                     onBack = navigateBack,
                     onDataChanged = { dataVersion += 1 },
                 )
+                "report" -> if (currentPack != null && currentTopic != null && currentLesson != null) {
+                    ReportIssueScreen(
+                        pack = currentPack,
+                        topic = currentTopic,
+                        lesson = currentLesson,
+                        onBack = navigateBack,
+                        onShareReport = { issueType, details ->
+                            val reportText = buildString {
+                                appendLine("Noor content issue report")
+                                appendLine("Form ${currentPack.form} · ${currentPack.subject}")
+                                appendLine("Topic: ${currentTopic.title}")
+                                appendLine("Lesson: ${currentLesson.title}")
+                                appendLine("Content version: ${currentPack.contentVersion}")
+                                appendLine("Issue: $issueType")
+                                if (details.isNotBlank()) appendLine("Details: $details")
+                            }
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "Noor content issue: ${currentLesson.title}")
+                                putExtra(Intent.EXTRA_TEXT, reportText)
+                            }
+                            context.startActivity(
+                                Intent.createChooser(shareIntent, "Share content report")
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        },
+                    )
+                } else {
+                    MissingContentScreen(onBack = navigateBack)
+                }
                 "subject" -> if (currentPackEntry != null) {
                     SubjectScreen(
                         entry = currentPackEntry,
@@ -227,6 +260,7 @@ fun NoorApp() {
                         onStartQuiz = {
                             navigateTo("quiz")
                         },
+                        onReportContent = { navigateTo("report") },
                         onProgressChanged = { dataVersion += 1 },
                     )
                 } else {
@@ -576,6 +610,7 @@ private fun LessonScreen(
     repository: NoorRepository,
     onBack: () -> Unit,
     onStartQuiz: () -> Unit,
+    onReportContent: () -> Unit,
     onProgressChanged: () -> Unit,
 ) {
     var completed by remember(lesson.id) { mutableStateOf(lesson.id in repository.completedLessonIds()) }
@@ -625,6 +660,60 @@ private fun LessonScreen(
             }
         }
         PrimaryButton(text = "Practise this topic", onClick = onStartQuiz)
+        TextButton(onClick = onReportContent, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text("Report a content issue")
+        }
+    }
+}
+
+@Composable
+private fun ReportIssueScreen(
+    pack: ContentPack,
+    topic: ContentTopic,
+    lesson: ContentLesson,
+    onBack: () -> Unit,
+    onShareReport: (issueType: String, details: String) -> Unit,
+) {
+    val issueTypes = listOf("Incorrect information", "Unclear explanation", "Question or answer", "Other")
+    var selectedIssue by rememberSaveable(lesson.id) { mutableStateOf("") }
+    var details by rememberSaveable(lesson.id) { mutableStateOf("") }
+
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+        BackHeader("Report content issue", lesson.title, onBack)
+        Text("What should be reviewed?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        issueTypes.forEach { issueType ->
+            val isSelected = selectedIssue == issueType
+            Card(
+                onClick = { selectedIssue = issueType },
+                modifier = Modifier.semantics { selected = isSelected },
+                colors = CardDefaults.cardColors(containerColor = if (isSelected) NoorColors.Mint else Color.White),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) NoorColors.Moss else NoorColors.Mint),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(issueType, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    if (isSelected) Icon(Icons.Outlined.CheckCircle, contentDescription = "Selected", tint = NoorColors.Moss)
+                }
+            }
+        }
+        OutlinedTextField(
+            value = details,
+            onValueChange = { details = it.take(400) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Details (optional)") },
+            minLines = 3,
+            maxLines = 5,
+        )
+        Text("Do not include your name or contact details.", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+        PrimaryButton(
+            text = "Share report",
+            enabled = selectedIssue.isNotBlank(),
+            onClick = { onShareReport(selectedIssue, details.trim()) },
+        )
     }
 }
 

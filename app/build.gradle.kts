@@ -4,6 +4,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val noorDebugKeystoreFile = System.getenv("NOOR_DEBUG_KEYSTORE_FILE")
+val noorDebugKeystorePassword = System.getenv("NOOR_DEBUG_KEYSTORE_PASSWORD")
+val hasNoorDebugSigning =
+    !noorDebugKeystoreFile.isNullOrBlank() && !noorDebugKeystorePassword.isNullOrBlank()
+
 android {
     namespace = "mw.noor.app"
     compileSdk = 36
@@ -15,6 +20,25 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    if (hasNoorDebugSigning) {
+        signingConfigs {
+            create("noorDevelopment") {
+                storeFile = file(requireNotNull(noorDebugKeystoreFile))
+                storePassword = requireNotNull(noorDebugKeystorePassword)
+                keyAlias = "noor-development"
+                keyPassword = requireNotNull(noorDebugKeystorePassword)
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (hasNoorDebugSigning) {
+                signingConfig = signingConfigs.getByName("noorDevelopment")
+            }
+        }
     }
 
     buildFeatures {
