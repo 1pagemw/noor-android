@@ -856,8 +856,8 @@ private fun MissingContentScreen(onBack: () -> Unit) {
 @Composable
 private fun ScreenColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
-        modifier = modifier.fillMaxSize().background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 22.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        modifier = modifier.fillMaxSize().background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) { content() }
 }
 
