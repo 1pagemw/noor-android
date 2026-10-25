@@ -757,6 +757,11 @@ private fun SettingsScreen(
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Settings", "", onBack)
+        Text(
+            "Progress stays on this phone; it is not synced and is deleted if the app is uninstalled or its data is cleared.",
+            style = MaterialTheme.typography.bodySmall,
+            color = NoorColors.MossDark,
+        )
         SettingLine("Form", "Form ${repository.selectedForm()}")
         SettingLine("Content language", if (repository.language() == "en") "English" else repository.language())
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
