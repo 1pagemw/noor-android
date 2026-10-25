@@ -22,6 +22,14 @@ The font is sourced from [Google Fonts’ Atkinson Hyperlegible Next project](ht
 
 Prefer modular cards and compact subject rows with simple geometric line icons. Use rounded corners consistently, subtle borders, and minimal shadow. Keep navigation labels explicit: Today, Learn, Review, and Progress. Focused quiz screens should minimize navigation and make answer choices easy to tap.
 
+## Today home screen
+
+- Use 18dp horizontal page margins and 14dp top/bottom padding on the warm-cream canvas. Keep the content scrollable above a fixed white bottom bar.
+- Header: “Noor” at 28sp Bold in Ink, with “Form 3 · Biology & Physics” beneath at 14sp Medium in Deep Moss. Place a 24dp Forest settings icon in a 48dp touch target on the right.
+- Keep Continue Learning as the primary action. Place it 16dp below the header in a full-width Deep Moss card with 24dp corners and 18dp padding. Use a 12sp Mint overline, 14sp Regular subject/topic line, 20sp Semibold lesson title, and a 52dp-high Forest button with 16dp corners.
+- Place the 20sp Semibold “Form 3 subjects” section heading 20dp below the continue card. Subject cards use white surfaces, 1dp Mint borders, 20dp corners, 16dp padding, 48dp Forest icon tiles with 14dp corners, 18sp Semibold subject names, and 14sp Regular/Medium metadata and download status. Maintain 12dp vertical gaps.
+- Keep the four-tab navigation 80dp high above Android’s bottom gesture inset. Use 24dp icons, 12sp Medium labels, Deep Moss for unselected content, Forest for selected content, and a Mint selected indicator.
+
 ## Screen references
 
 - [Today dashboard](design/today.png)

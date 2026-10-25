@@ -74,6 +74,7 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -311,16 +312,23 @@ private fun LearningTabs(
         containerColor = NoorColors.Canvas,
         contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
+            NavigationBar(modifier = Modifier.heightIn(min = 80.dp), containerColor = Color.White) {
                 NoorTab.entries.forEach { tab ->
                     NavigationBarItem(
                         selected = selected == tab,
                         onClick = { onSelectTab(tab.name) },
                         icon = { Icon(tab.icon, contentDescription = null) },
-                        label = { Text(tab.title) },
+                        label = {
+                            Text(
+                                tab.title,
+                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = NoorColors.Moss,
                             selectedTextColor = NoorColors.Moss,
+                            unselectedIconColor = NoorColors.MossDark,
+                            unselectedTextColor = NoorColors.MossDark,
                             indicatorColor = NoorColors.Mint,
                         ),
                     )
@@ -370,25 +378,49 @@ private fun TodayScreen(
     onOpenSettings: () -> Unit,
     onContinueLesson: (mw.noor.app.data.LastLesson) -> Unit,
 ) {
-    ScreenColumn(modifier) {
-        ScreenHeader(title = "Noor", subtitle = "", onSettings = onOpenSettings)
+    ScreenColumn(modifier, contentSpacing = 0.dp) {
+        ScreenHeader(
+            title = "Noor",
+            subtitle = "Form 3 · Biology & Physics",
+            onSettings = onOpenSettings,
+            largeTitle = true,
+        )
         val lastLesson = repository.lastLesson()
         val continueEntry = lastLesson?.let { last -> entries.firstOrNull { it.id == last.packId } }
         val continuePack = continueEntry?.let(repository::loadPack)
         val continueTopic = continuePack?.topics?.firstOrNull { it.id == lastLesson?.topicId }
         val continueLesson = continueTopic?.lessons?.firstOrNull { it.id == lastLesson?.lessonId }
         if (continueEntry != null && continueTopic != null && continueLesson != null) {
+            Spacer(Modifier.height(16.dp))
             Surface(color = NoorColors.MossDark, shape = RoundedCornerShape(24.dp)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("CONTINUE LEARNING", style = MaterialTheme.typography.labelMedium, color = NoorColors.Mint)
-                    Text("${continueEntry.subject} · ${continueTopic.title}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.86f))
-                    Text(continueLesson.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = Color.White)
-                    PrimaryButton(text = "Open lesson", onClick = { onContinueLesson(lastLesson!!) })
+                    Text(
+                        "${continueEntry.subject} · ${continueTopic.title}",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp),
+                        color = Color.White.copy(alpha = 0.86f),
+                    )
+                    Text(
+                        continueLesson.title,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 28.sp),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                    PrimaryButton(text = "Open lesson", onClick = { onContinueLesson(lastLesson!!) }, minHeight = 52.dp)
                 }
             }
+            Spacer(Modifier.height(20.dp))
+        } else {
+            Spacer(Modifier.height(20.dp))
         }
-        Text("Form 3 subjects", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-        entries.forEach { entry ->
+        Text(
+            "Form 3 subjects",
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 28.sp),
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(12.dp))
+        entries.forEachIndexed { index, entry ->
+            if (index > 0) Spacer(Modifier.height(12.dp))
             PackCard(entry, downloaded = repository.loadPack(entry) != null, onClick = { onOpenPack(entry) })
         }
     }
@@ -428,10 +460,22 @@ private fun PackCard(entry: ContentCatalogEntry, downloaded: Boolean, onClick: (
                     Icon(if (downloaded) Icons.Outlined.CheckCircle else Icons.Outlined.MenuBook, contentDescription = null, tint = Color.White)
                 }
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(entry.subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Form ${entry.form} · ${countLabel(entry.topicCount, "topic")}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.7f))
-                Text(if (downloaded) "Saved offline" else formatBytes(entry.sizeBytes), style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    entry.subject,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 24.sp),
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "Form ${entry.form} · ${countLabel(entry.topicCount, "topic")}",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp),
+                    color = NoorColors.Ink.copy(alpha = 0.7f),
+                )
+                Text(
+                    if (downloaded) "Saved offline" else formatBytes(entry.sizeBytes),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+                    color = NoorColors.MossDark,
+                )
             }
             Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${entry.subject}", tint = NoorColors.Moss)
         }
@@ -869,23 +913,44 @@ private fun MissingContentScreen(onBack: () -> Unit) {
 private fun ScreenColumn(
     modifier: Modifier = Modifier,
     safeDrawingInsets: Boolean = false,
+    contentSpacing: Dp = 12.dp,
     content: @Composable () -> Unit,
 ) {
     val insets = if (safeDrawingInsets) Modifier.windowInsetsPadding(WindowInsets.safeDrawing) else Modifier
     Column(
         modifier = modifier.fillMaxSize().then(insets).background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(contentSpacing),
     ) { content() }
 }
 
 @Composable
-private fun ScreenHeader(title: String, subtitle: String, onSettings: (() -> Unit)? = null) {
+private fun ScreenHeader(
+    title: String,
+    subtitle: String,
+    onSettings: (() -> Unit)? = null,
+    largeTitle: Boolean = false,
+) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = NoorColors.Ink)
-            if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+            Text(
+                title,
+                style = if (largeTitle) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = NoorColors.Ink,
+            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+                    color = NoorColors.MossDark,
+                )
+            }
         }
-        if (onSettings != null) IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = NoorColors.Moss) }
+        if (onSettings != null) {
+            IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = NoorColors.Moss, modifier = Modifier.size(24.dp))
+            }
+        }
     }
 }
 
@@ -931,11 +996,11 @@ private fun StatusBadge(text: String) {
 }
 
 @Composable
-private fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
+private fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true, minHeight: Dp = 48.dp) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().heightIn(min = minHeight),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White, disabledContainerColor = NoorColors.Mint, disabledContentColor = NoorColors.MossDark),
     ) {
