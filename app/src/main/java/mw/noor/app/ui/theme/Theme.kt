@@ -31,16 +31,17 @@ private val NoorFontFamily = FontFamily(
     Font(R.font.atkinson_hyperlegible_next_semibold, FontWeight.SemiBold),
     Font(R.font.atkinson_hyperlegible_next_bold, FontWeight.Bold),
 )
+private val NoorDisplayFamily = FontFamily.Serif
 
 private val NoorTypography = Typography().let { defaults ->
     defaults.copy(
-        displayLarge = defaults.displayLarge.copy(fontFamily = NoorFontFamily, fontSize = 48.sp, lineHeight = 56.sp, fontWeight = FontWeight.Bold),
-        displayMedium = defaults.displayMedium.copy(fontFamily = NoorFontFamily, fontSize = 40.sp, lineHeight = 48.sp, fontWeight = FontWeight.Bold),
-        displaySmall = defaults.displaySmall.copy(fontFamily = NoorFontFamily, fontSize = 34.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold),
-        headlineLarge = defaults.headlineLarge.copy(fontFamily = NoorFontFamily, fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold),
-        headlineMedium = defaults.headlineMedium.copy(fontFamily = NoorFontFamily, fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
-        headlineSmall = defaults.headlineSmall.copy(fontFamily = NoorFontFamily, fontSize = 21.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold),
-        titleLarge = defaults.titleLarge.copy(fontFamily = NoorFontFamily, fontSize = 19.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold),
+        displayLarge = defaults.displayLarge.copy(fontFamily = NoorDisplayFamily, fontSize = 48.sp, lineHeight = 56.sp, fontWeight = FontWeight.Bold),
+        displayMedium = defaults.displayMedium.copy(fontFamily = NoorDisplayFamily, fontSize = 40.sp, lineHeight = 48.sp, fontWeight = FontWeight.Bold),
+        displaySmall = defaults.displaySmall.copy(fontFamily = NoorDisplayFamily, fontSize = 34.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold),
+        headlineLarge = defaults.headlineLarge.copy(fontFamily = NoorDisplayFamily, fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold),
+        headlineMedium = defaults.headlineMedium.copy(fontFamily = NoorDisplayFamily, fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
+        headlineSmall = defaults.headlineSmall.copy(fontFamily = NoorDisplayFamily, fontSize = 21.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold),
+        titleLarge = defaults.titleLarge.copy(fontFamily = NoorDisplayFamily, fontSize = 19.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold),
         titleMedium = defaults.titleMedium.copy(fontFamily = NoorFontFamily, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
         titleSmall = defaults.titleSmall.copy(fontFamily = NoorFontFamily, fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
         bodyLarge = defaults.bodyLarge.copy(fontFamily = NoorFontFamily, fontSize = 15.sp, lineHeight = 24.sp, fontWeight = FontWeight.Normal),

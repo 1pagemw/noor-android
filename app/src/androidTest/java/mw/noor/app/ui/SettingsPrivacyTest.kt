@@ -18,9 +18,9 @@ class SettingsPrivacyTest {
 
     @Test
     fun settingsExplainLocalProgressStorageAndDeletion() {
-        composeRule.onNodeWithText("Start learning").performClick()
+        composeRule.onNodeWithText("Get started").performClick()
 
-        composeRule.onNodeWithContentDescription("Settings").performClick()
+        composeRule.onNodeWithContentDescription("Profile and settings").performClick()
         composeRule.onNodeWithText(
             "Progress stays on this phone; it is not synced and is deleted if the app is uninstalled or its data is cleared.",
         ).assertIsDisplayed()
