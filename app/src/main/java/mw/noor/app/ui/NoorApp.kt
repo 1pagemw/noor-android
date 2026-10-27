@@ -3,6 +3,8 @@ package mw.noor.app.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.drawBehind
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,9 +77,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -95,7 +95,9 @@ import mw.noor.app.data.LastLesson
 import mw.noor.app.data.ContentPack
 import mw.noor.app.data.ContentTopic
 import mw.noor.app.data.NoorRepository
+import mw.noor.app.data.StudyStreak
 import mw.noor.app.data.TopicProgress
+import mw.noor.app.ui.lessonCompletionFraction
 import mw.noor.app.ui.theme.NoorColors
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -104,7 +106,6 @@ private enum class NoorTab(val title: String, val icon: ImageVector) {
     TODAY("Today", Icons.Outlined.Home),
     LEARN("Learn", Icons.Outlined.MenuBook),
     REVIEW("Review", Icons.Outlined.Refresh),
-    PROGRESS("Progress", Icons.Outlined.BarChart),
 }
 
 private data class HomeLessonTarget(
@@ -293,6 +294,7 @@ fun NoorApp() {
                         onBack = { navigateBack() },
                         onFinished = { correct, total ->
                             repository.recordQuizResult(currentTopic.id, correct, total)
+                            repository.recordStudyActivity()
                             dataVersion += 1
                             navigateBack()
                         },
@@ -428,12 +430,6 @@ private fun LearningTabs(
                 repository = repository,
                 onStartReview = onStartReview,
             )
-            NoorTab.PROGRESS -> ProgressScreen(
-                modifier = Modifier.padding(padding),
-                downloadedPacks = downloadedPacks,
-                repository = repository,
-                dataVersion = dataVersion,
-            )
         }
     }
 }
@@ -449,6 +445,7 @@ private fun TodayScreen(
     onContinueLesson: (mw.noor.app.data.LastLesson) -> Unit,
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    var showStreakInfo by rememberSaveable { mutableStateOf(false) }
     val lessonTargets = remember(entries, dataVersion) {
         entries.flatMap { entry ->
             repository.loadPack(entry)?.topics?.flatMap { topic ->
@@ -473,6 +470,7 @@ private fun TodayScreen(
         subjectLessons.drop(startAt).take(3)
     }.orEmpty()
     val completedLessons = remember(dataVersion) { repository.completedLessonIds() }
+    val streak = repository.studyStreak()
 
     ScreenColumn(modifier, contentSpacing = 12.dp) {
         ScreenHeader(
@@ -480,6 +478,8 @@ private fun TodayScreen(
             subtitle = "Form 3 · Biology & Physics",
             onSettings = onOpenSettings,
             largeTitle = true,
+            streak = streak,
+            onStreakClick = { showStreakInfo = true },
         )
         OutlinedTextField(
             value = searchQuery,
@@ -510,10 +510,15 @@ private fun TodayScreen(
             }
         } else {
             startTarget?.let { target ->
-                ContinueLearningCard(target, isContinue = continueTarget != null) {
-                    onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id))
-                }
-            }
+                val completedInTopic = target.topic.lessons.count { it.id in completedLessons }
+                ContinueLearningCard(
+                    target = target,
+                    isContinue = continueTarget != null,
+                    completedLessons = completedInTopic,
+                    totalLessons = target.topic.lessons.size,
+                    onClick = { onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id)) },
+                )
+            } ?: StartLearningCard { onSelectTab(NoorTab.LEARN.name) }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Today's path", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 TextButton(onClick = { onSelectTab(NoorTab.LEARN.name) }, modifier = Modifier.heightIn(min = 44.dp)) {
@@ -539,28 +544,78 @@ private fun TodayScreen(
             }
         }
     }
+    if (showStreakInfo) {
+        val streakMessage = when {
+            streak.studiedToday -> "Today’s study activity is recorded on this phone. Complete a lesson or finish a quiz on another day to continue your streak."
+            streak.days > 0 -> "Your streak is active. Complete a lesson or finish a quiz today to keep it going."
+            else -> "Complete a lesson or finish a quiz to start a study streak. Activity is stored on this phone."
+        }
+        AlertDialog(
+            onDismissRequest = { showStreakInfo = false },
+            title = { Text(if (streak.days > 0) "${countLabel(streak.days, "day")} streak" else "Study streak") },
+            text = { Text(streakMessage) },
+            confirmButton = { TextButton(onClick = { showStreakInfo = false }) { Text("Got it") } },
+        )
+    }
 }
 
 @Composable
-private fun ContinueLearningCard(target: HomeLessonTarget, isContinue: Boolean, onClick: () -> Unit) {
+private fun ContinueLearningCard(target: HomeLessonTarget, isContinue: Boolean, completedLessons: Int, totalLessons: Int, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = NoorColors.MossDark),
         shape = RoundedCornerShape(20.dp),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(16.dp),
+            Modifier.fillMaxWidth().padding(18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(if (isContinue) "CONTINUE LEARNING" else "START LEARNING", style = MaterialTheme.typography.labelSmall, color = NoorColors.Mint)
-                Text("${target.entry.subject} · ${target.topic.title}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.86f))
-                Text(target.lesson.title, style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 2)
+                Text("${target.entry.subject} · ${target.topic.title}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                Text(target.lesson.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, maxLines = 2)
+                Text(
+                    "${completedLessons.coerceIn(0, totalLessons.coerceAtLeast(0))} of $totalLessons ${if (totalLessons == 1) "lesson" else "lessons"} complete",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NoorColors.Mint,
+                )
+                LinearProgressIndicator(
+                    progress = { lessonCompletionFraction(completedLessons, totalLessons) },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = NoorColors.Mint,
+                    trackColor = Color.White.copy(alpha = 0.22f),
+                )
             }
             Surface(color = NoorColors.Mint, shape = CircleShape, modifier = Modifier.size(44.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.ArrowForward, contentDescription = "Open lesson", tint = NoorColors.MossDark)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StartLearningCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = NoorColors.MossDark),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("START LEARNING", style = MaterialTheme.typography.labelSmall, color = NoorColors.Mint)
+                Text("Choose a subject to begin", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text("Save Biology or Physics for offline study.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.88f))
+            }
+            Surface(color = NoorColors.Mint, shape = CircleShape, modifier = Modifier.size(44.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Browse subjects", tint = NoorColors.MossDark)
                 }
             }
         }
@@ -746,26 +801,65 @@ private fun TopicCard(
     onOpenLesson: (ContentLesson) -> Unit,
     onStartQuiz: () -> Unit,
 ) {
+    val completedCount = topic.lessons.count { it.id in completedLessons }
+    val totalLessons = topic.lessons.size
+    val completion = lessonCompletionFraction(completedCount, totalLessons)
+    val lessonLabel = if (totalLessons == 1) "lesson" else "lessons"
     Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, NoorColors.Mint)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(topic.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            topic.lessons.forEach { lesson ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(if (lesson.id in completedLessons) Icons.Outlined.CheckCircle else Icons.Outlined.MenuBook, contentDescription = null, tint = NoorColors.Moss, modifier = Modifier.size(19.dp))
-                    Text(lesson.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    Text("${lesson.readTimeMinutes} min", style = MaterialTheme.typography.labelSmall, color = NoorColors.Ink.copy(alpha = 0.6f))
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(17.dp))
+                .drawBehind {
+                    if (completion > 0f) {
+                        drawRect(
+                            color = NoorColors.Mint,
+                            size = androidx.compose.ui.geometry.Size(size.width * completion, size.height),
+                        )
+                    }
                 }
-                Button(
-                    onClick = { onOpenLesson(lesson) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Mint, contentColor = NoorColors.MossDark),
-                ) { Text(if (lesson.id in completedLessons) "Review lesson" else "Open lesson") }
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(topic.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "$completedCount/$totalLessons $lessonLabel complete",
+                style = MaterialTheme.typography.bodySmall,
+                color = NoorColors.MossDark,
+            )
+            topic.lessons.forEach { lesson ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(onClick = { onOpenLesson(lesson) })
+                        .heightIn(min = 48.dp)
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        if (lesson.id in completedLessons) Icons.Outlined.CheckCircle else Icons.Outlined.MenuBook,
+                        contentDescription = if (lesson.id in completedLessons) "Lesson completed" else null,
+                        tint = NoorColors.Moss,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(lesson.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Text(countLabel(lesson.readTimeMinutes, "minute"), style = MaterialTheme.typography.labelSmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${lesson.title}", tint = NoorColors.Moss, modifier = Modifier.size(18.dp))
+                }
             }
-            if (progress != null) {
-                Text("Last quiz: ${progress.lastScorePercent}% · ${if (progress.nextReviewAtMillis <= System.currentTimeMillis()) "review due" else "review scheduled"}", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    progress?.let {
+                        "Last quiz · ${it.lastScorePercent}% · ${if (it.nextReviewAtMillis <= System.currentTimeMillis()) "Review due" else "Scheduled"}"
+                    } ?: "Not practised",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NoorColors.MossDark,
+                )
+                TextButton(onClick = onStartQuiz, modifier = Modifier.heightIn(min = 48.dp)) { Text("Practise topic") }
             }
-            TextButton(onClick = onStartQuiz, modifier = Modifier.align(Alignment.End)) { Text("Practise topic") }
         }
     }
 }
@@ -837,6 +931,7 @@ private fun LessonScreen(
             TextButton(
                 onClick = {
                     repository.markLessonCompleted(lesson.id)
+                    repository.recordStudyActivity()
                     completed = true
                     onProgressChanged()
                 },
@@ -918,28 +1013,31 @@ private fun ReviewScreen(
         val entry = entries.firstOrNull { it.id == pack.id } ?: return@flatMap emptyList()
         pack.topics.filter { it.id in dueIds }.map { entry to it }
     }
+    val otherTopics = downloadedPacks.flatMap { pack ->
+        val entry = entries.firstOrNull { it.id == pack.id } ?: return@flatMap emptyList()
+        pack.topics.filter { it.id !in dueIds }.map { entry to it }
+    }
     ScreenColumn(modifier) {
         ScreenHeader("Review", "Your private practice queue")
         if (downloadedPacks.isEmpty()) {
             Text("No saved subjects", style = MaterialTheme.typography.titleMedium, color = NoorColors.MossDark)
-        } else if (dueTopics.isEmpty()) {
-            Text("Nothing due", style = MaterialTheme.typography.titleMedium, color = NoorColors.MossDark)
         } else {
-            Text("Due now · ${countLabel(dueTopics.size, "topic")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            dueTopics.forEach { (entry, topic) -> ReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
-        }
-        if (downloadedPacks.isNotEmpty()) {
-            Text(if (dueTopics.isEmpty()) "Practise a saved topic" else "Other saved topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            downloadedPacks.forEach { pack ->
-                val entry = entries.firstOrNull { it.id == pack.id } ?: return@forEach
-                pack.topics.filter { it.id !in dueIds }.forEach { topic -> ReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
+            Text("Due today · ${countLabel(dueTopics.size, "topic")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            if (dueTopics.isEmpty()) {
+                Text("Nothing due", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
+            } else {
+                dueTopics.forEach { (entry, topic) -> DueReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
+            }
+            if (otherTopics.isNotEmpty()) {
+                Text("Other saved topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                otherTopics.forEach { (entry, topic) -> SavedTopicRow(entry, topic, onStartReview) }
             }
         }
     }
 }
 
 @Composable
-private fun ReviewCard(
+private fun DueReviewCard(
     entry: ContentCatalogEntry,
     topic: ContentTopic,
     progress: TopicProgress?,
@@ -947,77 +1045,55 @@ private fun ReviewCard(
 ) {
     Card(
         onClick = { onStartReview(entry, topic) },
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = NoorColors.Mint),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, NoorColors.Mint),
+        border = BorderStroke(1.dp, NoorColors.Moss),
     ) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(topic.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("${entry.subject} · Form ${entry.form}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
-                if (progress != null) Text("Last score ${progress.lastScorePercent}%", style = MaterialTheme.typography.labelSmall, color = NoorColors.MossDark)
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(topic.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("${entry.subject} · Form ${entry.form}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                    if (progress != null) Text("Last score ${progress.lastScorePercent}%", style = MaterialTheme.typography.labelSmall, color = NoorColors.MossDark)
+                }
+                Icon(Icons.Outlined.Refresh, contentDescription = null, tint = NoorColors.Moss)
             }
-            Icon(Icons.Outlined.ArrowForward, contentDescription = "Start ${topic.title} review", tint = NoorColors.Moss)
+            Button(
+                onClick = { onStartReview(entry, topic) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(percent = 50),
+                colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White),
+            ) {
+                Text("Review now", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Outlined.ArrowForward, contentDescription = null)
+            }
         }
     }
 }
 
 @Composable
-private fun ProgressScreen(
-    modifier: Modifier,
-    downloadedPacks: List<ContentPack>,
-    repository: NoorRepository,
-    dataVersion: Int,
+private fun SavedTopicRow(
+    entry: ContentCatalogEntry,
+    topic: ContentTopic,
+    onStartReview: (ContentCatalogEntry, ContentTopic) -> Unit,
 ) {
-    val summary = remember(dataVersion, downloadedPacks) { repository.progressSummary(downloadedPacks) }
-    val completedLessonIds = remember(dataVersion) { repository.completedLessonIds() }
-    ScreenColumn(modifier) {
-        ScreenHeader("Your progress", "Stored on this phone")
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricCard("${summary.completedLessons}/${summary.totalLessons}", "lessons complete", Modifier.weight(1f))
-            val accuracy = if (summary.answeredQuestions == 0) "—" else "${summary.correctAnswers * 100 / summary.answeredQuestions}%"
-            MetricCard(accuracy, "practice accuracy", Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricCard(summary.quizzesCompleted.toString(), countLabel(summary.quizzesCompleted, "practice session"), Modifier.weight(1f))
-            MetricCard(summary.dueTopicIds.size.toString(), "${countLabel(summary.dueTopicIds.size, "topic")} due", Modifier.weight(1f))
-        }
-        if (downloadedPacks.isEmpty()) {
-            Text("No saved subjects", style = MaterialTheme.typography.titleMedium, color = NoorColors.MossDark)
-        } else {
-            downloadedPacks.forEach { pack ->
-                Text("${pack.subject} · Form ${pack.form}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                pack.topics.forEach { topic ->
-                    val progress = repository.topicProgress(topic.id)
-                    val lessonDone = topic.lessons.count { it.id in completedLessonIds }
-                    val lessonTotal = topic.lessons.size
-                    val fractions = topicProgressFractions(lessonDone, lessonTotal, progress?.lastScorePercent)
-                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(topic.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("Lessons", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.72f))
-                            Text("$lessonDone/$lessonTotal complete", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.72f))
-                        }
-                        NoorProgressBar(
-                            fraction = fractions.lessonCompletion,
-                            description = "Lesson completion: $lessonDone of $lessonTotal",
-                        )
-                        if (progress == null) {
-                            Text("Quiz · Not practised", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
-                        } else {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Latest quiz", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.72f))
-                                Text("${progress.lastScorePercent}%", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark, fontWeight = FontWeight.SemiBold)
-                            }
-                            NoorProgressBar(
-                                fraction = fractions.latestQuizAccuracy ?: 0f,
-                                description = "Latest quiz score ${progress.lastScorePercent} percent",
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                }
+    Card(
+        onClick = { onStartReview(entry, topic) },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, NoorColors.Mint),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(topic.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("${entry.subject} · Form ${entry.form}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
             }
+            Icon(Icons.Outlined.ArrowForward, contentDescription = "Practise ${topic.title}", tint = NoorColors.Moss)
         }
     }
 }
@@ -1055,6 +1131,10 @@ private fun SettingsScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard("${summary.completedLessons}/${summary.totalLessons}", "lessons complete", Modifier.weight(1f))
             MetricCard(accuracy, "practice accuracy", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            MetricCard(summary.quizzesCompleted.toString(), countLabel(summary.quizzesCompleted, "practice session"), Modifier.weight(1f))
+            MetricCard(summary.dueTopicIds.size.toString(), "${countLabel(summary.dueTopicIds.size, "topic")} due", Modifier.weight(1f))
         }
         Card(
             onClick = onOpenLearn,
@@ -1114,7 +1194,7 @@ private fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             title = { Text("Clear learning progress?") },
-            text = { Text("Progress will be deleted. Saved lesson packs will stay.") },
+            text = { Text("Progress and the study streak will be deleted. Saved lesson packs will stay.") },
             confirmButton = {
                 TextButton(onClick = {
                     repository.clearProgress()
@@ -1249,6 +1329,8 @@ private fun ScreenHeader(
     subtitle: String,
     onSettings: (() -> Unit)? = null,
     largeTitle: Boolean = false,
+    streak: StudyStreak? = null,
+    onStreakClick: (() -> Unit)? = null,
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1264,6 +1346,18 @@ private fun ScreenHeader(
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
                     color = NoorColors.MossDark,
                 )
+            }
+        }
+        if (streak != null && onStreakClick != null) {
+            TextButton(
+                onClick = onStreakClick,
+                modifier = Modifier.heightIn(min = 48.dp).semantics {
+                    contentDescription = "Study streak: ${countLabel(streak.days, "day")}${if (streak.studiedToday) ", studied today" else ""}"
+                },
+            ) {
+                Icon(Icons.Outlined.Whatshot, contentDescription = null, tint = NoorColors.Moss)
+                Spacer(Modifier.width(4.dp))
+                Text(streak.days.toString(), color = NoorColors.MossDark, fontWeight = FontWeight.SemiBold)
             }
         }
         if (onSettings != null) {
@@ -1345,31 +1439,6 @@ private fun SettingLine(title: String, value: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Text(value, style = MaterialTheme.typography.bodyMedium, color = NoorColors.Ink.copy(alpha = 0.72f))
-    }
-}
-
-@Composable
-private fun NoorProgressBar(fraction: Float, description: String) {
-    val progress = normalizedProgressFraction(fraction)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(8.dp)
-            .clip(CircleShape)
-            .background(NoorColors.Mint)
-            .semantics {
-                contentDescription = description
-                progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
-            },
-    ) {
-        if (progress > 0f) {
-            Box(
-                Modifier
-                    .fillMaxWidth(progress)
-                    .fillMaxSize()
-                    .background(NoorColors.Moss),
-            )
-        }
     }
 }
 

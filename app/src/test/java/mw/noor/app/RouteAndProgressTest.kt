@@ -3,7 +3,10 @@ package mw.noor.app
 import mw.noor.app.ui.RouteHistory
 import mw.noor.app.ui.countLabel
 import mw.noor.app.ui.normalizedProgressFraction
+import mw.noor.app.ui.lessonCompletionFraction
 import mw.noor.app.ui.topicProgressFractions
+import mw.noor.app.data.currentStudyStreak
+import mw.noor.app.data.nextStudyStreak
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -67,10 +70,44 @@ class RouteAndProgressTest {
     }
 
     @Test
+    fun topicCardShadingTracksLessonCompletionOnly() {
+        assertEquals(0f, lessonCompletionFraction(0, 2), 0f)
+        assertEquals(0.5f, lessonCompletionFraction(1, 2), 0f)
+        assertEquals(1f, lessonCompletionFraction(2, 2), 0f)
+        assertEquals(0f, lessonCompletionFraction(0, 0), 0f)
+    }
+
+    @Test
     fun countLabelsUseCorrectSingularAndPluralForms() {
         assertEquals("1 topic", countLabel(1, "topic"))
         assertEquals("2 topics", countLabel(2, "topic"))
         assertEquals("1 practice session", countLabel(1, "practice session"))
         assertEquals("0 practice sessions", countLabel(0, "practice session"))
+    }
+
+    @Test
+    fun streakCountsAtMostOneActivityPerDay() {
+        val streak = nextStudyStreak("2026-10-27", 4, "2026-10-27", "2026-10-26")
+
+        assertEquals(4, streak.days)
+        assertEquals(true, streak.studiedToday)
+    }
+
+    @Test
+    fun streakExtendsOnConsecutiveLocalDays() {
+        val streak = nextStudyStreak("2026-10-26", 4, "2026-10-27", "2026-10-26")
+
+        assertEquals(5, streak.days)
+        assertEquals(true, streak.studiedToday)
+    }
+
+    @Test
+    fun streakRestartsAfterMissedDayAndExpiredStreakIsHidden() {
+        val restarted = nextStudyStreak("2026-10-25", 4, "2026-10-27", "2026-10-26")
+        val inactive = currentStudyStreak("2026-10-25", 4, "2026-10-27", "2026-10-26")
+
+        assertEquals(1, restarted.days)
+        assertEquals(0, inactive.days)
+        assertEquals(false, inactive.studiedToday)
     }
 }

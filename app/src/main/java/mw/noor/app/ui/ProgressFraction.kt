@@ -4,6 +4,10 @@ package mw.noor.app.ui
 internal fun normalizedProgressFraction(value: Float): Float =
     if (value.isNaN() || value.isInfinite()) 0f else value.coerceIn(0f, 1f)
 
+internal fun lessonCompletionFraction(completedLessons: Int, totalLessons: Int): Float =
+    if (totalLessons <= 0) 0f
+    else normalizedProgressFraction(completedLessons.coerceAtLeast(0).toFloat() / totalLessons.toFloat())
+
 internal data class TopicProgressFractions(
     val lessonCompletion: Float,
     val latestQuizAccuracy: Float?,

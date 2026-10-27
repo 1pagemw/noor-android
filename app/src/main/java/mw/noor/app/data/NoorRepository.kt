@@ -6,9 +6,13 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class NoorRepository(context: Context) {
     private val appContext = context.applicationContext
@@ -122,6 +126,40 @@ class NoorRepository(context: Context) {
     fun textScale(): Float = preferences.getFloat(KEY_TEXT_SCALE, 1f).coerceIn(0.9f, 1.3f)
     fun setTextScale(scale: Float) = preferences.edit().putFloat(KEY_TEXT_SCALE, scale.coerceIn(0.9f, 1.3f)).apply()
 
+    fun studyStreak(nowMillis: Long = System.currentTimeMillis()): StudyStreak {
+        val today = localDayKey(nowMillis)
+        val yesterdayCalendar = Calendar.getInstance().apply {
+            timeInMillis = nowMillis
+            add(Calendar.DAY_OF_YEAR, -1)
+        }
+        val yesterday = localDayKey(yesterdayCalendar.timeInMillis)
+        return currentStudyStreak(
+            lastActivityDay = preferences.getString(KEY_STREAK_LAST_ACTIVITY_DAY, null),
+            storedDays = preferences.getInt(KEY_STREAK_DAYS, 0),
+            today = today,
+            yesterday = yesterday,
+        )
+    }
+
+    fun recordStudyActivity(nowMillis: Long = System.currentTimeMillis()): StudyStreak {
+        val today = localDayKey(nowMillis)
+        val yesterdayCalendar = Calendar.getInstance().apply {
+            timeInMillis = nowMillis
+            add(Calendar.DAY_OF_YEAR, -1)
+        }
+        val next = nextStudyStreak(
+            lastActivityDay = preferences.getString(KEY_STREAK_LAST_ACTIVITY_DAY, null),
+            storedDays = preferences.getInt(KEY_STREAK_DAYS, 0),
+            today = today,
+            yesterday = localDayKey(yesterdayCalendar.timeInMillis),
+        )
+        preferences.edit()
+            .putString(KEY_STREAK_LAST_ACTIVITY_DAY, today)
+            .putInt(KEY_STREAK_DAYS, next.days)
+            .apply()
+        return next
+    }
+
     fun completedLessonIds(): Set<String> = preferences.getStringSet(KEY_COMPLETED_LESSONS, emptySet()).orEmpty().toSet()
 
     fun markLessonCompleted(lessonId: String) {
@@ -215,12 +253,17 @@ class NoorRepository(context: Context) {
             .remove(KEY_LAST_PACK)
             .remove(KEY_LAST_TOPIC)
             .remove(KEY_LAST_LESSON)
+            .remove(KEY_STREAK_LAST_ACTIVITY_DAY)
+            .remove(KEY_STREAK_DAYS)
             .apply()
     }
 
     private fun readTopicStats(): JSONObject = runCatching {
         JSONObject(preferences.getString(KEY_TOPIC_STATS, "{}") ?: "{}")
     }.getOrDefault(JSONObject())
+
+    private fun localDayKey(nowMillis: Long): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(nowMillis))
 
     private fun packFile(id: String) = File(packsDirectory, "$id.json")
 
@@ -247,6 +290,8 @@ class NoorRepository(context: Context) {
         private const val KEY_LAST_PACK = "last_pack"
         private const val KEY_LAST_TOPIC = "last_topic"
         private const val KEY_LAST_LESSON = "last_lesson"
+        private const val KEY_STREAK_LAST_ACTIVITY_DAY = "streak_last_activity_day"
+        private const val KEY_STREAK_DAYS = "streak_days"
         private const val MAX_PACK_BYTES = 2L * 1024L * 1024L
         private const val SUCCESS_THRESHOLD = 0.8f
     }

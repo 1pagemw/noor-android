@@ -23,7 +23,7 @@ Build spacing from a consistent 4/8-point scale. Keep cards compact, use rounded
 
 ## Shared navigation
 
-Keep the four-tab navigation: **Today**, **Learn**, **Review**, and **Progress**. It remains fixed above Android's bottom gesture inset, with 24dp icons, 12sp Medium labels, Deep Moss for unselected content, Forest for selected content, and a Mint selected indicator. Use Android safe-drawing insets and scrollable content on long screens. Back navigation must return to the previous route rather than exit the app.
+Keep exactly three bottom tabs: **Today**, **Learn**, and **Review**. Profile remains reachable from the top-right profile control. The bar remains fixed above Android's bottom gesture inset, with 24dp icons, 12sp Medium labels, Deep Moss for unselected content, Forest for selected content, and a Mint selected indicator. Use Android safe-drawing insets and scrollable content on long screens. Back navigation must return to the previous route rather than exit the app.
 
 ## Screen direction
 
@@ -33,7 +33,7 @@ Use a lower-case serif “noor” wordmark, the headline “Small steps. Big kno
 
 ### Today
 
-Keep Continue Learning as the primary action in a Deep Moss card. A local search field searches saved lessons and topics only. “Today's path” is assembled from available saved lesson packs and displays actual completion state; do not invent streaks, points, elapsed-time claims, or progress. Provide a compact route to Learn rather than repeating large subject cards on this screen.
+Keep Continue Learning as the primary action in a prominent Deep Moss card. Show lesson/topic context and actual topic lesson completion; never imply reading position that Noor does not track. If no lesson is saved, the card routes to Learn. A local search field searches saved lessons and topics only. “Today's path” is assembled from available saved lesson packs and displays actual completion state. A tappable flame indicator shows a local-day streak; only marking a lesson complete or finishing a quiz counts as study activity. Explain this rule and today's recorded state when tapped. Do not backfill activity history, sync it, or infer study from opening or abandoning content.
 
 ### Learn
 
@@ -45,7 +45,7 @@ Show subject/topic, lesson position, reading time, form, and the pack's actual c
 
 ### Review and progress
 
-Review presents the private practice queue, with due topics separated from other saved topics. Progress stays local and clearly separates lesson completion from quiz accuracy. Accuracy is unavailable until questions have been answered; zero-value progress bars must have no partial fill.
+Review presents the private practice queue with visibly distinct sections. Topics due today use prominent Mint cards and a clear “Review now” action; other saved topics use compact white rows. Derive due state from the local schedule and current saved packs. Topic cards in the subject view use a proportional Mint fill based only on completed lessons / total lessons, plus a readable completion count. Keep quiz accuracy and review scheduling as separate data. Values at 0%, intermediate completion, and 100% must render accurately.
 
 ### Quick Check
 
@@ -53,7 +53,7 @@ Use a focused question layout with visible position/progress, large answer targe
 
 ### Profile and settings
 
-Show the learner's selected form and actual local learning stats without asking for an account or inventing a student identity. Preserve controls for saved packs, text scaling, privacy, app version, and deliberate progress deletion.
+Show the learner's selected form and four actual local summary stats in a compact 2 × 2 grid: lessons complete, practice accuracy, practice sessions, and topics due. Accuracy is “—” until questions have been answered. Preserve controls for saved packs, text scaling, privacy, app version, and deliberate progress deletion. Do not duplicate the removed Progress screen's per-topic dashboard.
 
 ## Data and content safeguards
 
