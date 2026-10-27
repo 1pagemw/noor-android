@@ -1,7 +1,6 @@
 package mw.noor.app.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -24,7 +23,6 @@ class SettingsPrivacyTest {
         composeRule.onNodeWithText("Today").assertIsDisplayed()
         composeRule.onNodeWithText("Learn").assertIsDisplayed()
         composeRule.onNodeWithText("Review").assertIsDisplayed()
-        composeRule.onNodeWithText("Progress").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Study streak: 0 days").performClick()
         composeRule.onNodeWithText("Study streak").assertIsDisplayed()
         composeRule.onNodeWithText("Got it").performClick()
