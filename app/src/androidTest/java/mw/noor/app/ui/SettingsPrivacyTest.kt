@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import mw.noor.app.MainActivity
 import org.junit.Rule
@@ -35,6 +36,6 @@ class SettingsPrivacyTest {
         composeRule.onNodeWithText("practice accuracy").assertIsDisplayed()
         composeRule.onNodeWithText("0 practice sessions").assertIsDisplayed()
         composeRule.onNodeWithText("0 topics due").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Text size control").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Text size control").performScrollTo().assertIsDisplayed()
     }
 }
