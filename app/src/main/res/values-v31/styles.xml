@@ -7,6 +7,5 @@
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowSplashScreenBackground">#F6F3EA</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_noor_sprout</item>
-        <item name="android:postSplashScreenTheme">@style/Theme.Noor</item>
     </style>
 </resources>
