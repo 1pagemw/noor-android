@@ -10,7 +10,7 @@ Noor should help secondary-school students in Malawi learn and revise curriculum
 4. Review topics that need another try.
 5. See progress and choose a useful next step.
 
-The `feature/android-scaffold` branch advances the Form 3 Biology and Physics pilot to v0.2.0: it retains the offline learning loop and local progress, places the four summary metrics in Profile, uses three primary tabs, distinguishes due-review cards from other saved topics, shades topic cards by lesson completion, and adds an on-device study streak. The starter packs contain six Biology topics and seven Physics topics, each with one short lesson and two questions.
+The `feature/android-scaffold` branch advances the Form 3 Biology and Physics pilot to v0.3.0. In addition to the offline learning loop and local progress, it uses three primary tabs, shows four summary metrics in Profile, distinguishes due-review cards from other saved topics, shades topic cards by lesson completion, adds an on-device study streak, and begins Phase 2 pack-lifecycle hardening. The starter packs contain six Biology topics and seven Physics topics, each with one short lesson and two questions.
 
 **Current status:** the code and draft packs are not yet an approved classroom pilot. Topic scope is provisional, the current official syllabus documents have not been verified, and no Malawi teacher has reviewed the lessons. CI and manual Android/offline device checks must pass before calling the alpha exit gate complete. See [`content scope and sources`](content/form3-scope.md) and [`versioning policy`](versioning.md).
 
@@ -30,7 +30,7 @@ Prepare the content model and local storage so a lesson pack can be updated with
 
 ### App versioning foundation
 
-The current development build advances the scaffold to `versionName = 0.2.0` and `versionCode = 2`. Keep `versionName` semantic and human-readable (`0.x.y` during pilot development; `1.0.0` for the first stable public release). Increase Android `versionCode` monotonically for every distributable build so a newer test build can update an older one. Tag release source with matching Git tags such as `v0.1.0` and `v1.0.0`.
+The current development build advances the scaffold to `versionName = 0.3.0` and `versionCode = 3`. Keep `versionName` semantic and human-readable (`0.x.y` during pilot development; `1.0.0` for the first stable public release). Increase Android `versionCode` monotonically for every distributable build so a newer test build can update an older one. Tag release source with matching Git tags such as `v0.1.0` and `v1.0.0`.
 
 The Actions workflow is for CI and debug APK artifacts. Repository builds use a stable development-only signing key from GitHub Secrets when available so newer development APKs can update earlier ones; this is not a production release key. Before distributing builds beyond the development team, add a separate release workflow that builds a signed APK/AAB from a version tag, creates release notes, and keeps debug and release builds clearly separate.
 
@@ -63,8 +63,11 @@ Run a time-bounded pilot with a small, consenting group of students and educator
 - Add more question formats only where useful and practical on phones (for example, numeric answers for mathematics after multiple-choice is reliable).
 - Add opt-in, local study reminders only if students and educators want them; reminders must be easy to turn off.
 - The MVP now includes a lesson-level report composer. It opens Android's share chooser with form, subject, topic, lesson, content version, and optional student-entered details; Noor does not send automatically or attach account/device identity. Define an official teacher destination and report-handling process before pilot use.
-- Improve pack updates, download recovery, storage warnings, and safe handling of an interrupted connection.
+- **Implemented in v0.3.0 (initial reliability slice):** detect a newer catalogue pack while keeping the older downloaded version usable, stage and validate updates before replacing the installed file, recover backups after an interrupted swap, and check available storage before a download/update. The broader retry/offline/network and low-storage matrix still needs device testing.
+- Improve the remaining pack download recovery and verify safe handling of interrupted or intermittent connections on target devices.
 - Test large text, contrast, screen readers, small screens, low storage, slow or intermittent data, and airplane-mode behavior.
+
+Reminders, extra quiz formats, expanded glossary/search, official report routing, and curriculum approval remain gated on student/educator preference, pilot observations, or decisions from the local content reviewer; do not infer those requirements from the software implementation alone.
 
 Use pilot observations to choose what to build next. Avoid collecting identifiable student analytics by default; if evaluation data is needed, agree consent, purpose, retention, and access first.
 

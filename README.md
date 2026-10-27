@@ -1,8 +1,8 @@
 # Noor Android
 
-Noor is a native Android learning app for secondary school students in Malawi. Version `0.1.0` is the Form 3 pilot for Biology and Physics. It follows the palette in [`docs/design-system.md`](docs/design-system.md) and keeps the five screen references in [`docs/design/`](docs/design/).
+Noor is a native Android learning app for secondary school students in Malawi. Version `0.3.0` is the Form 3 Biology and Physics development pilot. It follows the palette in [`docs/design-system.md`](docs/design-system.md) and keeps the screen references in [`docs/design/`](docs/design/).
 
-## What works in v0.1.0
+## What works in v0.3.0
 
 - First-run setup for the Form 3, English-language pilot; no account is required.
 - Biology and Physics lesson-pack catalogue with pack downloads over HTTPS.
@@ -10,6 +10,9 @@ Noor is a native Android learning app for secondary school students in Malawi. V
 - Each subject pack has a short lesson, key terms, and two explained multiple-choice questions per topic.
 - On-device lesson completion, quiz results, due-topic review schedule, progress summary, and text-size adjustment.
 - Settings to remove saved packs or clear progress while retaining downloads.
+- Three-tab navigation, private profile statistics, due-review cards, and progress-shaded topic cards.
+- Local study streak tracking after lesson completion or finished practice.
+- Newer-pack detection, pre-download storage checks, and staged pack replacement that preserves the current copy if an update fails.
 
 The Biology pack has six starter topics and the Physics pack has seven. Curriculum headings are provisional and the learning material is marked **Draft — local teacher review needed**. See [`docs/content/form3-scope.md`](docs/content/form3-scope.md) before using the content with students. A local Biology and Physics teacher should verify the syllabus mapping, explanations, terminology, calculations, and questions before classroom use.
 
@@ -30,10 +33,10 @@ GitHub Actions runs the content validator and Android unit tests, builds a debug
 
 ## Versioning and GitHub workflow
 
-Android `versionName` is `0.1.0` and `versionCode` is `1`. Keep `versionName` semantic and increase `versionCode` monotonically for each distributable build. Signed release builds, Git tags, and Play-ready bundles will be added before wider distribution; signing keys belong in GitHub Secrets, never in the repository.
+Android `versionName` is `0.3.0` and `versionCode` is `3`. Keep `versionName` semantic and increase `versionCode` monotonically for each distributable build. CI debug APKs use the stable development signing key; this is not a production signing configuration. Signed release builds, Git tags, and Play-ready bundles will be added before wider distribution; signing keys belong in GitHub Secrets, never in the repository.
 
 The repository is public. Changes should use feature branches and Pull Requests. `main` requires a passing `android-verify-build` check and resolved Pull Request conversations; force-pushes and branch deletion are disabled. Issues, Dependabot, and the Pull Request template support project planning and maintenance.
 
 ## Current limitations
 
-Noor does not yet provide official curriculum approval, full syllabus coverage, accounts, cloud sync, teacher dashboards, notifications, or a signed public release. Student progress stays on the phone and is removed if app data is cleared or the app is uninstalled.
+Noor does not yet provide official curriculum approval, full syllabus coverage, accounts, cloud sync, teacher dashboards, notifications, or a signed public release. Pack update and low-storage handling need manual testing on target phones and intermittent networks. Student progress stays on the phone and is removed if app data is cleared or the app is uninstalled.

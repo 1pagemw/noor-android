@@ -37,7 +37,7 @@ Keep Continue Learning as the primary action in a prominent Deep Moss card. Show
 
 ### Learn
 
-Show Form 3 Biology and Physics subject cards, with topic counts and offline status derived from the actual local pack state. The offline banner must distinguish saved packs from packs that still need downloading. Keep draft/teacher-review status visible while the lesson packs remain drafts.
+Show Form 3 Biology and Physics subject cards, with topic counts and offline status derived from the actual local pack state. The offline banner must distinguish saved packs from packs that still need downloading. When a newer catalogue version exists, keep the older validated pack usable and make the update action and required space clear. Disable downloads only when available storage is known to be insufficient; if capacity cannot be determined, allow the attempt and explain recoverable failures. Keep draft/teacher-review status visible while the lesson packs remain drafts.
 
 ### Lesson reading and completion
 

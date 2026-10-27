@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.net.HttpURLConnection
 import java.net.URL
@@ -13,11 +14,13 @@ import java.security.MessageDigest
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 
 class NoorRepository(context: Context) {
     private val appContext = context.applicationContext
     private val preferences = appContext.getSharedPreferences("noor_local_v1", Context.MODE_PRIVATE)
     private val packsDirectory = File(appContext.filesDir, "content-packs").apply { mkdirs() }
+    private val packFileInstaller = PackFileInstaller()
     private val catalog: List<ContentCatalogEntry> by lazy {
         appContext.assets.open("form3_catalog.json").bufferedReader().use { reader ->
             ContentJsonParser.parseCatalog(reader.readText())
@@ -28,76 +31,103 @@ class NoorRepository(context: Context) {
 
     fun loadPack(entry: ContentCatalogEntry): ContentPack? {
         val file = packFile(entry.id)
+        packFileInstaller.recover(file)
         if (!file.isFile) return null
         return runCatching {
             ContentJsonParser.parsePack(file.readText()).also { pack ->
                 require(pack.id == entry.id)
-                require(pack.contentVersion >= entry.contentVersion)
+                require(pack.form == entry.form && pack.subject == entry.subject)
             }
         }.getOrNull()
+    }
+
+    fun storageStatus(entry: ContentCatalogEntry): PackStorageStatus {
+        val availableBytes = packsDirectory.usableSpace.takeIf { it > 0L }
+        val requiredBytes = entry.sizeBytes.coerceAtLeast(0L) + DOWNLOAD_STORAGE_RESERVE_BYTES
+        return PackStorageStatus(
+            availableBytes = availableBytes,
+            requiredBytes = requiredBytes,
+            canDownload = hasDownloadSpace(availableBytes, requiredBytes),
+        )
     }
 
     suspend fun downloadPack(
         entry: ContentCatalogEntry,
         onProgress: (percent: Int) -> Unit,
     ): ContentPack = withContext(Dispatchers.IO) {
+        val storage = storageStatus(entry)
+        check(storage.canDownload) {
+            "Not enough free storage to safely download this pack. Free up space and try again."
+        }
         var lastError: Throwable? = null
         for (sourceUrl in entry.sourceUrls) {
             var temporaryFile: File? = null
+            var connection: HttpURLConnection? = null
             try {
-                val connection = (URL(sourceUrl).openConnection() as HttpURLConnection).apply {
+                val activeConnection = (URL(sourceUrl).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.1.0")
+                    setRequestProperty("User-Agent", "Noor-Android/0.3.0")
                     instanceFollowRedirects = true
                 }
-                connection.connect()
-                try {
-                    val response = connection.responseCode
-                    check(response in 200..299) { "Server returned HTTP $response" }
-                    val contentLength = connection.contentLengthLong
-                    check(contentLength <= MAX_PACK_BYTES) { "Content pack is larger than the allowed limit." }
-                    temporaryFile = File(packsDirectory, "${entry.id}.json.tmp")
-                    var received = 0L
-                    FileOutputStream(temporaryFile).use { output ->
-                        connection.inputStream.use { input ->
-                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                            while (true) {
-                                val read = input.read(buffer)
-                                if (read < 0) break
-                                received += read
-                                check(received <= MAX_PACK_BYTES) { "Content pack is larger than the allowed limit." }
-                                output.write(buffer, 0, read)
-                                val percent = if (contentLength > 0L) {
-                                    ((received * 100L / contentLength).toInt()).coerceIn(0, 99)
-                                } else {
-                                    0
-                                }
-                                onProgress(percent)
+                connection = activeConnection
+                activeConnection.connect()
+                val response = activeConnection.responseCode
+                check(response in 200..299) { "Server returned HTTP $response" }
+                val contentLength = activeConnection.contentLengthLong
+                check(contentLength <= MAX_PACK_BYTES) { "Content pack is larger than the allowed limit." }
+                temporaryFile = File(packsDirectory, "${entry.id}.json.tmp")
+                if (temporaryFile.exists()) temporaryFile.delete()
+                var received = 0L
+                FileOutputStream(temporaryFile).use { output ->
+                    activeConnection.inputStream.use { input ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            received += read
+                            check(received <= MAX_PACK_BYTES) { "Content pack is larger than the allowed limit." }
+                            output.write(buffer, 0, read)
+                            val percent = if (contentLength > 0L) {
+                                ((received * 100L / contentLength).toInt()).coerceIn(0, 99)
+                            } else {
+                                0
                             }
-                            output.fd.sync()
+                            onProgress(percent)
                         }
+                        output.fd.sync()
                     }
-                    check(sha256(temporaryFile) == entry.sha256) { "Content pack checksum does not match." }
-                    val pack = ContentJsonParser.parsePack(temporaryFile.readText())
-                    check(pack.id == entry.id) { "Downloaded pack does not match the catalogue." }
-                    check(pack.form == entry.form && pack.subject == entry.subject) { "Downloaded pack details do not match the catalogue." }
-                    check(pack.contentVersion == entry.contentVersion) { "Downloaded pack version does not match the catalogue." }
-                    val destination = packFile(entry.id)
-                    if (destination.exists()) destination.delete()
-                    check(temporaryFile.renameTo(destination)) { "Unable to save the downloaded content pack." }
-                    onProgress(100)
-                    return@withContext pack
-                } finally {
-                    connection.disconnect()
                 }
+
+                check(sha256(temporaryFile) == entry.sha256) { "Downloaded pack verification failed. Check your connection and try again." }
+                val pack = ContentJsonParser.parsePack(temporaryFile.readText())
+                check(pack.id == entry.id) { "Downloaded pack does not match the catalogue." }
+                check(pack.form == entry.form && pack.subject == entry.subject) { "Downloaded pack details do not match the catalogue." }
+                check(pack.contentVersion == entry.contentVersion) { "Downloaded pack version does not match the catalogue." }
+                packFileInstaller.install(temporaryFile, packFile(entry.id))
+                onProgress(100)
+                return@withContext pack
             } catch (error: Exception) {
                 temporaryFile?.delete()
+                if (error is CancellationException) throw error
                 lastError = error
+            } finally {
+                connection?.disconnect()
             }
         }
-        throw IllegalStateException("Unable to download this lesson pack. Check your connection and try again.", lastError)
+        val failureDetails = generateSequence(lastError) { it.cause }
+            .mapNotNull { it.message }
+            .joinToString(" ")
+            .lowercase(Locale.ROOT)
+        val message = when {
+            "enospc" in failureDetails || "no space" in failureDetails ->
+                "The phone ran out of storage during the download. Free up space and try again."
+            lastError is IOException ->
+                "Download interrupted. Check your connection or available phone storage and try again."
+            else -> lastError?.message ?: "Unable to download this lesson pack. Check your connection and try again."
+        }
+        throw IllegalStateException(message, lastError)
     }
 
     fun deletePack(entry: ContentCatalogEntry): Boolean {
@@ -293,6 +323,13 @@ class NoorRepository(context: Context) {
         private const val KEY_STREAK_LAST_ACTIVITY_DAY = "streak_last_activity_day"
         private const val KEY_STREAK_DAYS = "streak_days"
         private const val MAX_PACK_BYTES = 2L * 1024L * 1024L
+        private const val DOWNLOAD_STORAGE_RESERVE_BYTES = 64L * 1024L
         private const val SUCCESS_THRESHOLD = 0.8f
     }
 }
+
+data class PackStorageStatus(
+    val availableBytes: Long?,
+    val requiredBytes: Long,
+    val canDownload: Boolean,
+)

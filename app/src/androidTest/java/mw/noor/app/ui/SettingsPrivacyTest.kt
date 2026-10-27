@@ -35,5 +35,6 @@ class SettingsPrivacyTest {
         composeRule.onNodeWithText("practice accuracy").assertIsDisplayed()
         composeRule.onNodeWithText("0 practice sessions").assertIsDisplayed()
         composeRule.onNodeWithText("0 topics due").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Text size control").assertIsDisplayed()
     }
 }

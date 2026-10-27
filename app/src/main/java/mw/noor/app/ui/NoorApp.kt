@@ -80,6 +80,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -95,6 +96,7 @@ import mw.noor.app.data.LastLesson
 import mw.noor.app.data.ContentPack
 import mw.noor.app.data.ContentTopic
 import mw.noor.app.data.NoorRepository
+import mw.noor.app.data.packUpdateAvailable
 import mw.noor.app.data.StudyStreak
 import mw.noor.app.data.TopicProgress
 import mw.noor.app.ui.lessonCompletionFraction
@@ -224,8 +226,8 @@ fun NoorApp() {
                                 try {
                                     repository.downloadPack(entry) { percent -> downloadPercent = percent }
                                     dataVersion += 1
-                                } catch (_: Exception) {
-                                    downloadError = "failed"
+                                } catch (error: Exception) {
+                                    downloadError = error.message ?: "Download failed. Check your connection and try again."
                                 } finally {
                                     downloadingPackId = ""
                                 }
@@ -752,7 +754,9 @@ private fun SubjectScreen(
     onOpenLesson: (ContentTopic, ContentLesson) -> Unit,
     onStartQuiz: (ContentTopic) -> Unit,
 ) {
-        ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+    val storageStatus = repository.storageStatus(entry)
+    val updateAvailable = pack != null && packUpdateAvailable(pack.contentVersion, entry.contentVersion)
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader(title = entry.subject, subtitle = "Form ${entry.form}", onBack = onBack)
         StatusBadge(entry.curriculumStatus)
         if (pack == null) {
@@ -765,20 +769,57 @@ private fun SubjectScreen(
                     } else {
                         Button(
                             onClick = { onDownload(entry) },
-                            modifier = Modifier.fillMaxWidth(),
+                            enabled = storageStatus.canDownload,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Mint, contentColor = NoorColors.MossDark),
                         ) {
                             Icon(Icons.Outlined.Download, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Download pack")
+                            Text(if (downloadError.isNotBlank()) "Try again" else "Download pack")
                         }
                     }
                 }
             }
-            if (downloadError.isNotBlank()) StatusBadge("Download failed")
+            if (!storageStatus.canDownload) {
+                InfoCard(
+                    title = "Not enough storage",
+                    body = "Free up space to download this pack safely. You need about ${formatBytes(storageStatus.requiredBytes)} free.",
+                    icon = Icons.Outlined.Info,
+                )
+            }
+            if (downloadError.isNotBlank()) Text(downloadError, style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
         } else {
-            Text("Saved offline · Version ${pack.contentVersion}", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+            if (updateAvailable) {
+                InfoCard(
+                    title = "Version ${entry.contentVersion} available",
+                    body = "Your saved Version ${pack.contentVersion} stays usable while the update downloads.",
+                    icon = Icons.Outlined.Download,
+                )
+                if (downloadingPackId == entry.id) {
+                    LinearProgressIndicator(
+                        progress = { downloadPercent / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = NoorColors.Moss,
+                        trackColor = NoorColors.Mint,
+                    )
+                    Text(if (downloadPercent == 0) "Connecting…" else "Updating ${downloadPercent}%", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+                } else {
+                    Button(
+                        onClick = { onDownload(entry) },
+                        enabled = storageStatus.canDownload,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = RoundedCornerShape(percent = 50),
+                        colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White),
+                    ) { Text(if (downloadError.isNotBlank()) "Try update again" else "Update pack · ${formatBytes(entry.sizeBytes)}") }
+                }
+                if (!storageStatus.canDownload) {
+                    Text("Not enough storage. Free up space before updating; the saved version will remain available.", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+                }
+                if (downloadError.isNotBlank()) Text(downloadError, style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+            } else {
+                Text("Saved offline · Version ${pack.contentVersion}", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+            }
             pack.topics.forEach { topic ->
                 val topicProgress = repository.topicProgress(topic.id)
                 TopicCard(
@@ -1161,7 +1202,15 @@ private fun SettingsScreen(
         SettingLine("Content language", if (repository.language() == "en") "English" else repository.language())
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Text size · ${(textScale * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Slider(value = textScale, onValueChange = onTextScaleChange, valueRange = 0.9f..1.3f)
+            Slider(
+                value = textScale,
+                onValueChange = onTextScaleChange,
+                valueRange = 0.9f..1.3f,
+                modifier = Modifier.semantics {
+                    contentDescription = "Text size control"
+                    stateDescription = "${(textScale * 100).roundToInt()} percent"
+                },
+            )
         }
         Text("Saved lesson packs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         val storedBytes = repository.downloadedBytes(entries)
