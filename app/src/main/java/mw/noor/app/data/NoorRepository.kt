@@ -24,6 +24,7 @@ class NoorRepository(context: Context) {
     private val packsDirectory = File(appContext.filesDir, "content-packs").apply { mkdirs() }
     private val lessonsDirectory = File(appContext.filesDir, "content-lessons").apply { mkdirs() }
     private val packFileInstaller = PackFileInstaller()
+    private data class LegacyPackCandidate(val file: File, val rawPack: String, val pack: ContentPack)
     private val catalog: List<ContentCatalogEntry> by lazy {
         appContext.assets.open("form3_catalog.json").bufferedReader().use { reader ->
             ContentJsonParser.parseCatalog(reader.readText())
@@ -99,7 +100,7 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.0")
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.1")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
@@ -196,7 +197,7 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.0")
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.1")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
@@ -270,17 +271,22 @@ class NoorRepository(context: Context) {
     @Synchronized
     fun migrateLegacyPack(packId: String) {
         val subject = lessonIndex.subject(packId) ?: return
+        val catalogEntry = catalog.firstOrNull { it.id == packId } ?: return
         val legacyFile = packFile(packId)
-        if (!legacyFile.isFile) return
-        val rawPack = runCatching { legacyFile.readText() }.getOrNull() ?: return
-        val parsedPack = runCatching { ContentJsonParser.parsePack(rawPack) }.getOrNull() ?: return
-        if (parsedPack.id != subject.id || parsedPack.form != subject.form || parsedPack.subject != subject.subject) return
+        val legacyBackup = File(legacyFile.parentFile, "${legacyFile.name}.bak")
+        val candidate = listOf(legacyFile, legacyBackup)
+            .mapNotNull { file -> readLegacyPackCandidate(file, subject, catalogEntry) }
+            .maxWithOrNull(compareBy<LegacyPackCandidate> { it.pack.contentVersion }.thenBy { it.file == legacyFile })
+            ?: return
+        // Restore the ordinary backup-only crash case through the installer. If a damaged main
+        // file and a valid backup coexist, leave both untouched while using the validated backup.
+        if (candidate.file == legacyBackup && !legacyFile.exists()) packFileInstaller.recover(legacyFile)
 
         subject.lessons.forEach { entry ->
             val destination = lessonFile(entry)
             if (loadStoredPayload(entry) != null) return@forEach
             runCatching {
-                val payloadJson = LessonContentJsonParser.payloadFromLegacyPack(rawPack, entry)
+                val payloadJson = LessonContentJsonParser.payloadFromLegacyPack(candidate.rawPack, entry)
                 val payload = LessonContentJsonParser.parsePayload(payloadJson)
                 validatePayload(entry, payload, allowOlderVersion = true)
                 val staged = File(lessonsDirectory, "${entry.packId}__${entry.lessonId}.migration.tmp")
@@ -291,7 +297,28 @@ class NoorRepository(context: Context) {
                 packFileInstaller.install(staged, destination)
             }
         }
-        if (subject.lessons.all { loadStoredPayload(it) != null }) legacyFile.delete()
+        if (subject.lessons.all { loadStoredPayload(it) != null }) {
+            legacyFile.delete()
+            legacyBackup.delete()
+        }
+    }
+
+    private fun readLegacyPackCandidate(
+        file: File,
+        subject: LessonSubjectIndex,
+        catalogEntry: ContentCatalogEntry,
+    ): LegacyPackCandidate? {
+        if (!file.isFile || file.length() > MAX_PACK_BYTES) return null
+        val rawPack = runCatching { file.readText(Charsets.UTF_8) }.getOrNull() ?: return null
+        val pack = runCatching { ContentJsonParser.parsePack(rawPack) }.getOrNull() ?: return null
+        if (pack.id != subject.id || pack.form != subject.form || pack.subject != subject.subject) return null
+        if (pack.contentVersion !in 1..catalogEntry.contentVersion) return null
+        // The current version has a trusted hash. Historical hashes are not retained in this
+        // catalogue, so older installed packs remain eligible after structural validation.
+        if (pack.contentVersion == catalogEntry.contentVersion &&
+            runCatching { sha256(file) }.getOrNull() != catalogEntry.sha256
+        ) return null
+        return LegacyPackCandidate(file, rawPack, pack)
     }
 
     fun downloadedBytes(entries: List<ContentCatalogEntry> = catalog): Long = entries.sumOf { entry ->
