@@ -1,0 +1,259 @@
+{
+  "catalogVersion": 1,
+  "subjects": [
+    {
+      "packId": "form3_biology",
+      "form": 3,
+      "subject": "Biology",
+      "language": "en",
+      "contentVersion": 1,
+      "curriculumStatus": "Draft — local teacher review needed",
+      "topics": [
+        {
+          "topicId": "bio_cells",
+          "title": "Cells",
+          "description": "Cell structures and how they support life.",
+          "lessons": [
+            {
+              "lessonId": "bio_cells_intro",
+              "title": "Cells: the basic units of life",
+              "readTimeMinutes": 5,
+              "sizeBytes": 2635,
+              "sha256": "ccf40c8de79a747358a4059cd525cb64159bfb934f7f14827e017cc2ca6b41af",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_biology/bio_cells_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_biology/bio_cells_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "bio_movement",
+          "title": "Movement in and out of cells",
+          "description": "Diffusion, osmosis, and active transport.",
+          "lessons": [
+            {
+              "lessonId": "bio_movement_intro",
+              "title": "How substances cross cell membranes",
+              "readTimeMinutes": 6,
+              "sizeBytes": 2846,
+              "sha256": "b9386e6c828a20789f5961475b1effd4da4d5bd46025b1806f2a6b0fe27cf95d",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_biology/bio_movement_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_biology/bio_movement_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "bio_plant_structure",
+          "title": "Plant structure",
+          "description": "How roots, stems, leaves, and stomata are adapted to their roles.",
+          "lessons": [
+            {
+              "lessonId": "bio_plant_structure_intro",
+              "title": "How plant parts are organised",
+              "readTimeMinutes": 5,
+              "sizeBytes": 2605,
+              "sha256": "4ff3c33ddd9a167b850704527f08c8470c27470d61b3bd94c4c0ff7860b65aed",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_biology/bio_plant_structure_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_biology/bio_plant_structure_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "bio_photosynthesis",
+          "title": "Photosynthesis",
+          "description": "How green plants use light energy to make glucose.",
+          "lessons": [
+            {
+              "lessonId": "bio_photosynthesis_intro",
+              "title": "Making food in green plants",
+              "readTimeMinutes": 6,
+              "sizeBytes": 2636,
+              "sha256": "9de395bfd202d46347207e1fbcc3bfe6219c1aaf96078e3ef5f7a3561e19aacb",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_biology/bio_photosynthesis_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_biology/bio_photosynthesis_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "bio_transport",
+          "title": "Transport in plants",
+          "description": "Water movement, transpiration, and sugar transport.",
+          "lessons": [
+            {
+              "lessonId": "bio_transport_intro",
+              "title": "Moving water and sugars",
+              "readTimeMinutes": 6,
+              "sizeBytes": 2642,
+              "sha256": "d4681f202d39218d2fa2d6baff246423e5149ee7f72942889084f09989f20456",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_biology/bio_transport_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_biology/bio_transport_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "bio_ecosystems",
+          "title": "Ecosystem basics",
+          "description": "Organisms, habitats, food chains, and energy flow.",
+          "lessons": [
+            {
+              "lessonId": "bio_ecosystems_intro",
+              "title": "How organisms interact",
+              "readTimeMinutes": 6,
+              "sizeBytes": 2657,
+              "sha256": "900afb0ab66220b2fea221f8010ec21bd2fe445832d440f08777591d33155c96",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_biology/bio_ecosystems_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_biology/bio_ecosystems_intro.json"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packId": "form3_physics",
+      "form": 3,
+      "subject": "Physics",
+      "language": "en",
+      "contentVersion": 1,
+      "curriculumStatus": "Draft — local teacher review needed",
+      "topics": [
+        {
+          "topicId": "phy_measurements",
+          "title": "Measurements II",
+          "description": "Choosing instruments, reading scales, and recording quantities with units.",
+          "lessons": [
+            {
+              "lessonId": "phy_measurements_intro",
+              "title": "Making careful measurements",
+              "readTimeMinutes": 5,
+              "sizeBytes": 2623,
+              "sha256": "b46d39d32fe87b27c7222a53e3bb8a1a343a3ea3096676187149221679ddab60",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_physics/phy_measurements_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_physics/phy_measurements_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "phy_investigations",
+          "title": "Scientific investigations",
+          "description": "Fair tests, variables, repeated readings, tables, and graphs.",
+          "lessons": [
+            {
+              "lessonId": "phy_investigations_intro",
+              "title": "Planning a fair test",
+              "readTimeMinutes": 5,
+              "sizeBytes": 2717,
+              "sha256": "bfd47640aa912971e3618c13e430b16ce9111d4d25fe33e44cfa2a8e2d310770",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_physics/phy_investigations_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_physics/phy_investigations_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "phy_kinetic_theory",
+          "title": "Kinetic theory of matter",
+          "description": "A particle model for solids, liquids, gases, and changes of state.",
+          "lessons": [
+            {
+              "lessonId": "phy_kinetic_theory_intro",
+              "title": "Matter as moving particles",
+              "readTimeMinutes": 6,
+              "sizeBytes": 2610,
+              "sha256": "d54dd569d97ba840609571ae1340a9b58a4e70fe5d03ede8aa6de1a3eb35d687",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_physics/phy_kinetic_theory_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_physics/phy_kinetic_theory_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "phy_thermometry",
+          "title": "Thermometry",
+          "description": "Temperature, thermometer readings, and calibration ideas.",
+          "lessons": [
+            {
+              "lessonId": "phy_thermometry_intro",
+              "title": "Measuring temperature",
+              "readTimeMinutes": 5,
+              "sizeBytes": 2594,
+              "sha256": "a4f248e5884f1b20f94341ed33808f7e710e17945de94580b589afc3ead0fc71",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_physics/phy_thermometry_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_physics/phy_thermometry_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "phy_pressure",
+          "title": "Pressure",
+          "description": "Pressure as force per unit area and pressure in fluids.",
+          "lessons": [
+            {
+              "lessonId": "phy_pressure_intro",
+              "title": "Understanding pressure",
+              "readTimeMinutes": 5,
+              "sizeBytes": 2450,
+              "sha256": "cff86a0780a2466ee493e0e98b2283111242f3a726670d3420f05c8384fab22b",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_physics/phy_pressure_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_physics/phy_pressure_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "phy_gas_laws",
+          "title": "Gas laws",
+          "description": "How gas pressure, volume, and temperature are related under stated conditions.",
+          "lessons": [
+            {
+              "lessonId": "phy_gas_laws_intro",
+              "title": "Pressure, volume, and temperature of gases",
+              "readTimeMinutes": 6,
+              "sizeBytes": 2665,
+              "sha256": "0973fbee8d75347019243d5b6b12c0c8bfcdb048bd98a6366bd257e4627f1240",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_physics/phy_gas_laws_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_physics/phy_gas_laws_intro.json"
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "phy_scalars_vectors",
+          "title": "Scalar and vector quantities",
+          "description": "Distinguishing quantities with magnitude only from those with direction.",
+          "lessons": [
+            {
+              "lessonId": "phy_scalars_vectors_intro",
+              "title": "Magnitude and direction",
+              "readTimeMinutes": 5,
+              "sizeBytes": 2340,
+              "sha256": "1a8f76e64cc09921879192875416425704785e02f6ac9be15d88fe70219245a5",
+              "sourceUrls": [
+                "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/lesson_units/form3_physics/phy_scalars_vectors_intro.json",
+                "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/lesson_units/form3_physics/phy_scalars_vectors_intro.json"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

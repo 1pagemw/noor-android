@@ -7,7 +7,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import mw.noor.app.MainActivity
+import mw.noor.app.data.LessonContentJsonParser
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,6 +20,19 @@ import org.junit.runner.RunWith
 class SettingsPrivacyTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
+
+    @Test
+    fun lessonCatalogIsMetadataForAllIndividualUnits() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val index = context.assets.open("lesson_catalog.json").bufferedReader().use { reader ->
+            LessonContentJsonParser.parseIndex(reader.readText())
+        }
+
+        assertEquals(13, index.lessons.size)
+        assertEquals(setOf("form3_biology", "form3_physics"), index.subjects.map { it.id }.toSet())
+        assertEquals(index.lessons.size, index.lessons.map { it.lessonId }.toSet().size)
+        assertTrue(index.lessons.all { it.sizeBytes > 0L && it.sha256.matches(Regex("[a-f0-9]{64}")) })
+    }
 
     @Test
     fun settingsExplainLocalProgressStorageAndDeletion() {

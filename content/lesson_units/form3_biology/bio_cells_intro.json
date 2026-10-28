@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_biology",
+  "form": 3,
+  "subject": "Biology",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "bio_cells",
+  "topicTitle": "Cells",
+  "topicDescription": "Cell structures and how they support life.",
+  "lesson": {
+    "id": "bio_cells_intro",
+    "title": "Cells: the basic units of life",
+    "readTimeMinutes": 5,
+    "sections": [
+      {
+        "heading": "What is a cell?",
+        "body": "A cell is the smallest unit that can carry out the processes of life. Some organisms consist of one cell, while plants and animals are made of many specialised cells. Cells contain cytoplasm enclosed by a cell membrane. The membrane controls what enters and leaves the cell."
+      },
+      {
+        "heading": "Structures in plant and animal cells",
+        "body": "The nucleus contains genetic material and helps control cell activities. Mitochondria release usable energy during respiration. Plant cells also have a cellulose cell wall for support, chloroplasts for photosynthesis in green tissues, and a large permanent vacuole containing cell sap. Animal cells do not have a cellulose cell wall or chloroplasts."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Cell membrane",
+        "definition": "A thin, selectively permeable boundary that controls movement into and out of a cell."
+      },
+      {
+        "term": "Cytoplasm",
+        "definition": "The jelly-like material where many cell reactions take place."
+      },
+      {
+        "term": "Chloroplast",
+        "definition": "A plant-cell organelle containing chlorophyll, where photosynthesis takes place."
+      }
+    ],
+    "questions": [
+      {
+        "id": "bio_cells_q1",
+        "prompt": "What is one main function of the cell membrane?",
+        "options": [
+          "It makes food in every cell",
+          "It controls what enters and leaves the cell",
+          "It stores all the cell's water",
+          "It builds the cell wall"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "The cell membrane is selectively permeable. It regulates the movement of substances into and out of the cell."
+      },
+      {
+        "id": "bio_cells_q2",
+        "prompt": "Which structure contains most of a cell's genetic material?",
+        "options": [
+          "Nucleus",
+          "Cell wall",
+          "Vacuole",
+          "Cytoplasm"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "The nucleus contains the chromosomes, which carry most of the cell's genetic information."
+      }
+    ]
+  }
+}

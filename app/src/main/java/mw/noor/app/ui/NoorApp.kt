@@ -60,6 +60,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -86,7 +88,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
+import androidx.work.WorkInfo
 import android.content.Intent
 import mw.noor.app.BuildConfig
 import mw.noor.app.R
@@ -95,8 +97,12 @@ import mw.noor.app.data.ContentLesson
 import mw.noor.app.data.LastLesson
 import mw.noor.app.data.ContentPack
 import mw.noor.app.data.ContentTopic
+import mw.noor.app.data.LessonContentIndex
+import mw.noor.app.data.LessonDownloadWork
+import mw.noor.app.data.LessonIndexEntry
+import mw.noor.app.data.LessonSubjectIndex
+import mw.noor.app.data.LessonTopicIndex
 import mw.noor.app.data.NoorRepository
-import mw.noor.app.data.packUpdateAvailable
 import mw.noor.app.data.StudyStreak
 import mw.noor.app.data.TopicProgress
 import mw.noor.app.ui.lessonCompletionFraction
@@ -121,7 +127,7 @@ fun NoorApp() {
     val context = LocalContext.current.applicationContext
     val repository = remember(context) { NoorRepository(context) }
     val catalog = remember { repository.catalog() }
-    val scope = rememberCoroutineScope()
+    val lessonIndex = remember { repository.lessonCatalog() }
 
     var setupComplete by remember { mutableStateOf(repository.isSetupComplete()) }
     var selectedTabName by rememberSaveable { mutableStateOf(NoorTab.TODAY.name) }
@@ -130,9 +136,6 @@ fun NoorApp() {
     var selectedTopicId by rememberSaveable { mutableStateOf("") }
     var selectedLessonId by rememberSaveable { mutableStateOf("") }
     var dataVersion by remember { mutableIntStateOf(0) }
-    var downloadingPackId by rememberSaveable { mutableStateOf("") }
-    var downloadPercent by rememberSaveable { mutableIntStateOf(0) }
-    var downloadError by rememberSaveable { mutableStateOf("") }
     var textScale by remember { mutableStateOf(repository.textScale()) }
 
     val navigationState = remember(encodedNavigationState) { RouteHistory.decode(encodedNavigationState) }
@@ -158,14 +161,20 @@ fun NoorApp() {
             })
         } else {
             val currentPackEntry = catalog.firstOrNull { it.id == selectedPackId }
-            val currentPack = currentPackEntry?.let { repository.loadPack(it) }
+            val indexedPacks = remember(dataVersion, lessonIndex, catalog) {
+                catalog.mapNotNull { entry -> lessonIndex.subject(entry.id)?.let { it.toContentPack(entry, repository) } }
+            }
+            val currentPack = indexedPacks.firstOrNull { it.id == selectedPackId }
             val currentTopic = currentPack?.topics?.firstOrNull { it.id == selectedTopicId }
-            val currentLesson = currentTopic?.lessons?.firstOrNull { it.id == selectedLessonId }
-            val downloadedPacks = catalog.mapNotNull { entry -> repository.loadPack(entry) }
+            val currentSubjectIndex = lessonIndex.subject(selectedPackId)
+            val currentTopicIndex = lessonIndex.topic(selectedPackId, selectedTopicId)
+            val currentLessonEntry = lessonIndex.lesson(selectedPackId, selectedTopicId, selectedLessonId)
+            val currentLesson = currentLessonEntry?.let(repository::loadLesson)
 
             when (route) {
                 "settings" -> SettingsScreen(
                     entries = catalog,
+                    lessonIndex = lessonIndex,
                     repository = repository,
                     textScale = textScale,
                     onTextScaleChange = {
@@ -182,7 +191,7 @@ fun NoorApp() {
                 "report" -> if (currentPack != null && currentTopic != null && currentLesson != null) {
                     ReportIssueScreen(
                         pack = currentPack,
-                        topic = currentTopic,
+                        topic = currentTopic.copy(lessons = listOf(currentLesson)),
                         lesson = currentLesson,
                         onBack = navigateBack,
                         onShareReport = { issueType, details ->
@@ -209,30 +218,13 @@ fun NoorApp() {
                 } else {
                     MissingContentScreen(onBack = navigateBack)
                 }
-                "subject" -> if (currentPackEntry != null) {
+                "subject" -> if (currentPackEntry != null && currentPack != null) {
                     SubjectScreen(
                         entry = currentPackEntry,
                         pack = currentPack,
                         repository = repository,
-                        downloadingPackId = downloadingPackId,
-                        downloadPercent = downloadPercent,
-                        downloadError = downloadError,
+                        savedLessonIds = repository.savedLessonIds(),
                         onBack = navigateBack,
-                        onDownload = { entry ->
-                            downloadError = ""
-                            downloadingPackId = entry.id
-                            downloadPercent = 0
-                            scope.launch {
-                                try {
-                                    repository.downloadPack(entry) { percent -> downloadPercent = percent }
-                                    dataVersion += 1
-                                } catch (error: Exception) {
-                                    downloadError = error.message ?: "Download failed. Check your connection and try again."
-                                } finally {
-                                    downloadingPackId = ""
-                                }
-                            }
-                        },
                         onOpenLesson = { topic, lesson ->
                             selectedTopicId = topic.id
                             selectedLessonId = lesson.id
@@ -249,7 +241,8 @@ fun NoorApp() {
                         selectedTabName = selectedTabName,
                         entries = catalog,
                         repository = repository,
-                        downloadedPacks = downloadedPacks,
+                        downloadedPacks = indexedPacks,
+                        lessonIndex = lessonIndex,
                         dataVersion = dataVersion,
                         onSelectTab = { selectedTabName = it },
                         onOpenPack = { entry ->
@@ -272,34 +265,28 @@ fun NoorApp() {
                         },
                     )
                 }
-                "lesson" -> if (currentTopic != null && currentLesson != null) {
-                    LessonScreen(
-                        pack = currentPack!!,
-                        topic = currentTopic,
-                        lesson = currentLesson,
+                "lesson" -> if (currentSubjectIndex != null && currentTopicIndex != null && currentLessonEntry != null) {
+                    LessonDownloadRoute(
+                        subject = currentSubjectIndex,
+                        topic = currentTopicIndex,
+                        entry = currentLessonEntry,
                         repository = repository,
                         onBack = navigateBack,
-                        onStartQuiz = {
-                            navigateTo("quiz")
-                        },
+                        onStartQuiz = { navigateTo("quiz") },
                         onReportContent = { navigateTo("report") },
                         onProgressChanged = { dataVersion += 1 },
                     )
                 } else {
                     MissingContentScreen(onBack = navigateBack)
                 }
-                "quiz" -> if (currentTopic != null && currentPack != null) {
-                    QuizScreen(
-                        pack = currentPack,
-                        topic = currentTopic,
+                "quiz" -> if (currentSubjectIndex != null && currentTopicIndex != null) {
+                    TopicQuizRoute(
+                        subject = currentSubjectIndex,
+                        topic = currentTopicIndex,
                         repository = repository,
                         onBack = { navigateBack() },
-                        onFinished = { correct, total ->
-                            repository.recordQuizResult(currentTopic.id, correct, total)
-                            repository.recordStudyActivity()
-                            dataVersion += 1
-                            navigateBack()
-                        },
+                        onFinished = { _, _ -> navigateBack() },
+                        onProgressChanged = { dataVersion += 1 },
                     )
                 } else {
                     MissingContentScreen(onBack = navigateBack)
@@ -308,7 +295,8 @@ fun NoorApp() {
                     selectedTabName = selectedTabName,
                     entries = catalog,
                     repository = repository,
-                    downloadedPacks = downloadedPacks,
+                    downloadedPacks = indexedPacks,
+                    lessonIndex = lessonIndex,
                     dataVersion = dataVersion,
                     onSelectTab = { selectedTabName = it },
                     onOpenPack = { entry ->
@@ -372,6 +360,7 @@ private fun LearningTabs(
     entries: List<ContentCatalogEntry>,
     repository: NoorRepository,
     downloadedPacks: List<ContentPack>,
+    lessonIndex: LessonContentIndex,
     dataVersion: Int,
     onSelectTab: (String) -> Unit,
     onOpenPack: (ContentCatalogEntry) -> Unit,
@@ -412,6 +401,7 @@ private fun LearningTabs(
             NoorTab.TODAY -> TodayScreen(
                 modifier = Modifier.padding(padding),
                 entries = entries,
+                downloadedPacks = downloadedPacks,
                 repository = repository,
                 dataVersion = dataVersion,
                 onOpenSettings = onOpenSettings,
@@ -421,6 +411,7 @@ private fun LearningTabs(
             NoorTab.LEARN -> LearnScreen(
                 modifier = Modifier.padding(padding),
                 entries = entries,
+                downloadedPacks = downloadedPacks,
                 repository = repository,
                 onOpenPack = onOpenPack,
                 onOpenSettings = onOpenSettings,
@@ -429,6 +420,7 @@ private fun LearningTabs(
                 modifier = Modifier.padding(padding),
                 entries = entries,
                 downloadedPacks = downloadedPacks,
+                lessonIndex = lessonIndex,
                 repository = repository,
                 onStartReview = onStartReview,
             )
@@ -440,6 +432,7 @@ private fun LearningTabs(
 private fun TodayScreen(
     modifier: Modifier,
     entries: List<ContentCatalogEntry>,
+    downloadedPacks: List<ContentPack>,
     repository: NoorRepository,
     dataVersion: Int,
     onOpenSettings: () -> Unit,
@@ -448,11 +441,10 @@ private fun TodayScreen(
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showStreakInfo by rememberSaveable { mutableStateOf(false) }
-    val lessonTargets = remember(entries, dataVersion) {
-        entries.flatMap { entry ->
-            repository.loadPack(entry)?.topics?.flatMap { topic ->
-                topic.lessons.map { lesson -> HomeLessonTarget(entry, topic, lesson) }
-            }.orEmpty()
+    val lessonTargets = remember(downloadedPacks, entries) {
+        downloadedPacks.flatMap { pack ->
+            val entry = entries.firstOrNull { it.id == pack.id } ?: return@flatMap emptyList()
+            pack.topics.flatMap { topic -> topic.lessons.map { lesson -> HomeLessonTarget(entry, topic, lesson) } }
         }
     }
     val query = searchQuery.trim().lowercase(Locale.ROOT)
@@ -502,7 +494,7 @@ private fun TodayScreen(
         if (query.isNotBlank()) {
             Text("Search results", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             if (searchResults.isEmpty()) {
-                Text("No saved lessons match.", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
+                Text("No lessons match.", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
             } else {
                 searchResults.forEach { target ->
                     LessonTargetCard(target, completed = target.lesson.id in completedLessons) {
@@ -529,8 +521,8 @@ private fun TodayScreen(
             }
             if (pathTargets.isEmpty()) {
                 InfoCard(
-                    title = "Save a subject to begin",
-                    body = "Open Learn to save Biology or Physics for offline study.",
+                    title = "Choose a lesson to begin",
+                    body = "Lessons save individually as you open them.",
                     icon = Icons.Outlined.Download,
                 )
             } else {
@@ -578,6 +570,11 @@ private fun ContinueLearningCard(target: HomeLessonTarget, isContinue: Boolean, 
                 Text("${target.entry.subject} · ${target.topic.title}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
                 Text(target.lesson.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, maxLines = 2)
                 Text(
+                    if (target.lesson.isOfflineAvailable) "READY OFFLINE" else "SAVES TO THIS DEVICE WHEN OPENED",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NoorColors.Mint,
+                )
+                Text(
                     "${completedLessons.coerceIn(0, totalLessons.coerceAtLeast(0))} of $totalLessons ${if (totalLessons == 1) "lesson" else "lessons"} complete",
                     style = MaterialTheme.typography.bodySmall,
                     color = NoorColors.Mint,
@@ -613,7 +610,7 @@ private fun StartLearningCard(onClick: () -> Unit) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("START LEARNING", style = MaterialTheme.typography.labelSmall, color = NoorColors.Mint)
                 Text("Choose a subject to begin", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                Text("Save Biology or Physics for offline study.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.88f))
+                Text("Lessons save individually when opened.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.88f))
             }
             Surface(color = NoorColors.Mint, shape = CircleShape, modifier = Modifier.size(44.dp)) {
                 Box(contentAlignment = Alignment.Center) {
@@ -645,7 +642,11 @@ private fun LessonPathCard(number: Int, target: HomeLessonTarget, completed: Boo
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(target.topic.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("${target.entry.subject} · ${countLabel(target.lesson.readTimeMinutes, "minute")}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                Text(
+                    "${target.entry.subject} · ${countLabel(target.lesson.readTimeMinutes, "minute")} · ${if (target.lesson.isOfflineAvailable) "Offline" else "Online"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NoorColors.Ink.copy(alpha = 0.68f),
+                )
             }
             Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${target.topic.title}", tint = NoorColors.Moss)
         }
@@ -664,7 +665,11 @@ private fun LessonTargetCard(target: HomeLessonTarget, completed: Boolean, onCli
             Icon(if (completed) Icons.Outlined.CheckCircle else Icons.Outlined.MenuBook, contentDescription = null, tint = NoorColors.Moss)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(target.lesson.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("${target.entry.subject} · ${target.topic.title}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                Text(
+                    "${target.entry.subject} · ${target.topic.title} · ${if (target.lesson.isOfflineAvailable) "Saved offline" else "Downloads on open"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NoorColors.Ink.copy(alpha = 0.68f),
+                )
             }
             Icon(Icons.Outlined.ArrowForward, contentDescription = "Open lesson", tint = NoorColors.Moss)
         }
@@ -675,17 +680,17 @@ private fun LessonTargetCard(target: HomeLessonTarget, completed: Boolean, onCli
 private fun LearnScreen(
     modifier: Modifier,
     entries: List<ContentCatalogEntry>,
+    downloadedPacks: List<ContentPack>,
     repository: NoorRepository,
     onOpenPack: (ContentCatalogEntry) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     ScreenColumn(modifier) {
         ScreenHeader("Learn", "Form 3 · Biology & Physics", onOpenSettings)
-        val allSaved = entries.isNotEmpty() && entries.all { repository.loadPack(it) != null }
         InfoCard(
-            title = if (allSaved) "Subjects saved offline" else "Save subjects for offline study",
-            body = if (allSaved) "Study anytime, even without internet." else "Download a subject pack once to study offline.",
-            icon = if (allSaved) Icons.Outlined.CheckCircle else Icons.Outlined.Download,
+            title = "Lessons save as you open them",
+            body = "Saved lessons and their questions work offline.",
+            icon = Icons.Outlined.Download,
         )
         if (entries.any { it.curriculumStatus.contains("draft", ignoreCase = true) }) {
             InfoCard(
@@ -696,13 +701,16 @@ private fun LearnScreen(
         }
         Text("Your subjects", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         entries.forEach { entry ->
-            PackCard(entry, downloaded = repository.loadPack(entry) != null, onClick = { onOpenPack(entry) })
+            val pack = downloadedPacks.firstOrNull { it.id == entry.id }
+            if (pack != null) PackCard(entry, pack, onClick = { onOpenPack(entry) })
         }
     }
 }
 
 @Composable
-private fun PackCard(entry: ContentCatalogEntry, downloaded: Boolean, onClick: () -> Unit) {
+private fun PackCard(entry: ContentCatalogEntry, pack: ContentPack, onClick: () -> Unit) {
+    val savedCount = pack.topics.flatMap { it.lessons }.count { it.isOfflineAvailable }
+    val lessonCount = pack.topics.sumOf { it.lessons.size }
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -716,7 +724,11 @@ private fun PackCard(entry: ContentCatalogEntry, downloaded: Boolean, onClick: (
         ) {
             Surface(color = NoorColors.Moss, shape = RoundedCornerShape(14.dp), modifier = Modifier.size(48.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(if (downloaded) Icons.Outlined.CheckCircle else Icons.Outlined.MenuBook, contentDescription = null, tint = Color.White)
+                    Icon(
+                        if (lessonCount > 0 && savedCount == lessonCount) Icons.Outlined.CheckCircle else Icons.Outlined.MenuBook,
+                        contentDescription = null,
+                        tint = Color.White,
+                    )
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -731,7 +743,9 @@ private fun PackCard(entry: ContentCatalogEntry, downloaded: Boolean, onClick: (
                     color = NoorColors.Ink.copy(alpha = 0.7f),
                 )
                 Text(
-                    if (downloaded) "Saved offline" else formatBytes(entry.sizeBytes),
+                    if (savedCount == lessonCount && lessonCount > 0) "All $lessonCount lessons offline"
+                    else if (savedCount > 0) "$savedCount of $lessonCount lessons offline"
+                    else "Lessons download when opened",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
                     color = NoorColors.MossDark,
                 )
@@ -744,92 +758,28 @@ private fun PackCard(entry: ContentCatalogEntry, downloaded: Boolean, onClick: (
 @Composable
 private fun SubjectScreen(
     entry: ContentCatalogEntry,
-    pack: ContentPack?,
+    pack: ContentPack,
     repository: NoorRepository,
-    downloadingPackId: String,
-    downloadPercent: Int,
-    downloadError: String,
+    savedLessonIds: Set<String>,
     onBack: () -> Unit,
-    onDownload: (ContentCatalogEntry) -> Unit,
     onOpenLesson: (ContentTopic, ContentLesson) -> Unit,
     onStartQuiz: (ContentTopic) -> Unit,
 ) {
-    val storageStatus = repository.storageStatus(entry)
-    val updateAvailable = pack != null && packUpdateAvailable(pack.contentVersion, entry.contentVersion)
+    val lessons = pack.topics.flatMap { it.lessons }
+    val savedCount = lessons.count { it.id in savedLessonIds }
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader(title = entry.subject, subtitle = "Form ${entry.form}", onBack = onBack)
         StatusBadge(entry.curriculumStatus)
-        if (pack == null) {
-            Surface(color = NoorColors.MossDark, shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("${countLabel(entry.topicCount, "topic")} · about ${formatBytes(entry.sizeBytes)}", color = NoorColors.Mint)
-                    if (downloadingPackId == entry.id) {
-                        LinearProgressIndicator(progress = { downloadPercent / 100f }, modifier = Modifier.fillMaxWidth(), color = NoorColors.Mint, trackColor = Color.White.copy(alpha = 0.24f))
-                        Text(if (downloadPercent == 0) "Connecting…" else "Downloading $downloadPercent%", color = Color.White)
-                    } else {
-                        Button(
-                            onClick = { onDownload(entry) },
-                            enabled = storageStatus.canDownload,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Mint, contentColor = NoorColors.MossDark),
-                        ) {
-                            Icon(Icons.Outlined.Download, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (downloadError.isNotBlank()) "Try again" else "Download pack")
-                        }
-                    }
-                }
-            }
-            if (!storageStatus.canDownload) {
-                InfoCard(
-                    title = "Not enough storage",
-                    body = "Free up space to download this pack safely. You need about ${formatBytes(storageStatus.requiredBytes)} free.",
-                    icon = Icons.Outlined.Info,
-                )
-            }
-            if (downloadError.isNotBlank()) Text(downloadError, style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
-        } else {
-            if (updateAvailable) {
-                InfoCard(
-                    title = "Version ${entry.contentVersion} available",
-                    body = "Your saved Version ${pack.contentVersion} stays usable while the update downloads.",
-                    icon = Icons.Outlined.Download,
-                )
-                if (downloadingPackId == entry.id) {
-                    LinearProgressIndicator(
-                        progress = { downloadPercent / 100f },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = NoorColors.Moss,
-                        trackColor = NoorColors.Mint,
-                    )
-                    Text(if (downloadPercent == 0) "Connecting…" else "Updating ${downloadPercent}%", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
-                } else {
-                    Button(
-                        onClick = { onDownload(entry) },
-                        enabled = storageStatus.canDownload,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        shape = RoundedCornerShape(percent = 50),
-                        colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White),
-                    ) { Text(if (downloadError.isNotBlank()) "Try update again" else "Update pack · ${formatBytes(entry.sizeBytes)}") }
-                }
-                if (!storageStatus.canDownload) {
-                    Text("Not enough storage. Free up space before updating; the saved version will remain available.", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
-                }
-                if (downloadError.isNotBlank()) Text(downloadError, style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
-            } else {
-                Text("Saved offline · Version ${pack.contentVersion}", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
-            }
-            pack.topics.forEach { topic ->
-                val topicProgress = repository.topicProgress(topic.id)
-                TopicCard(
-                    topic = topic,
-                    progress = topicProgress,
-                    completedLessons = repository.completedLessonIds(),
-                    onOpenLesson = { lesson -> onOpenLesson(topic, lesson) },
-                    onStartQuiz = { onStartQuiz(topic) },
-                )
-            }
+        Text("$savedCount of ${countLabel(lessons.size, "lesson")} saved offline", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
+        pack.topics.forEach { topic ->
+            val topicProgress = repository.topicProgress(topic.id)
+            TopicCard(
+                topic = topic,
+                progress = topicProgress,
+                completedLessons = repository.completedLessonIds(),
+                onOpenLesson = { lesson -> onOpenLesson(topic, lesson) },
+                onStartQuiz = { onStartQuiz(topic) },
+            )
         }
     }
 }
@@ -885,7 +835,14 @@ private fun TopicCard(
                         tint = NoorColors.Moss,
                         modifier = Modifier.size(20.dp),
                     )
-                    Text(lesson.title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(lesson.title, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            if (lesson.isOfflineAvailable) "Saved offline" else "Downloads when opened",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NoorColors.MossDark,
+                        )
+                    }
                     Text(countLabel(lesson.readTimeMinutes, "minute"), style = MaterialTheme.typography.labelSmall, color = NoorColors.Ink.copy(alpha = 0.68f))
                     Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${lesson.title}", tint = NoorColors.Moss, modifier = Modifier.size(18.dp))
                 }
@@ -906,7 +863,7 @@ private fun TopicCard(
 }
 
 @Composable
-private fun LessonScreen(
+internal fun LessonScreen(
     pack: ContentPack,
     topic: ContentTopic,
     lesson: ContentLesson,
@@ -917,6 +874,7 @@ private fun LessonScreen(
     onProgressChanged: () -> Unit,
 ) {
     var completed by remember(lesson.id) { mutableStateOf(lesson.id in repository.completedLessonIds()) }
+    var completedOffline by rememberSaveable(lesson.id) { mutableStateOf(false) }
     val lessonPosition = (topic.lessons.indexOfFirst { it.id == lesson.id } + 1).coerceAtLeast(0)
     val lessonTotal = topic.lessons.size.coerceAtLeast(1)
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
@@ -966,11 +924,17 @@ private fun LessonScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = NoorColors.Moss, modifier = Modifier.size(18.dp))
-                Text("Lesson completed", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+                Text(
+                    if (completedOffline) "Completed offline · saved on this phone. Account sync is not available yet."
+                    else "Completed · saved on this device",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NoorColors.MossDark,
+                )
             }
         } else {
             TextButton(
                 onClick = {
+                    completedOffline = !repository.hasValidatedConnection()
                     repository.markLessonCompleted(lesson.id)
                     repository.recordStudyActivity()
                     completed = true
@@ -1046,23 +1010,28 @@ private fun ReviewScreen(
     modifier: Modifier,
     entries: List<ContentCatalogEntry>,
     downloadedPacks: List<ContentPack>,
+    lessonIndex: LessonContentIndex,
     repository: NoorRepository,
     onStartReview: (ContentCatalogEntry, ContentTopic) -> Unit,
 ) {
     val dueIds = repository.dueTopicIds()
+    val savedLessonIds = repository.savedLessonIds()
     val dueTopics = downloadedPacks.flatMap { pack ->
         val entry = entries.firstOrNull { it.id == pack.id } ?: return@flatMap emptyList()
         pack.topics.filter { it.id in dueIds }.map { entry to it }
     }
     val otherTopics = downloadedPacks.flatMap { pack ->
         val entry = entries.firstOrNull { it.id == pack.id } ?: return@flatMap emptyList()
-        pack.topics.filter { it.id !in dueIds }.map { entry to it }
+        pack.topics.filter { topic -> topic.id !in dueIds && topic.lessons.any { it.id in savedLessonIds } }.map { entry to it }
     }
     ScreenColumn(modifier) {
         ScreenHeader("Review", "Your private practice queue")
-        if (downloadedPacks.isEmpty()) {
-            Text("No saved subjects", style = MaterialTheme.typography.titleMedium, color = NoorColors.MossDark)
+        if (lessonIndex.lessons.isEmpty()) {
+            Text("No lessons are available yet.", style = MaterialTheme.typography.titleMedium, color = NoorColors.MossDark)
         } else {
+            if (savedLessonIds.isEmpty() && dueTopics.isEmpty()) {
+                Text("Open a lesson to save its practice for offline review.", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
+            }
             Text("Due today · ${countLabel(dueTopics.size, "topic")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             if (dueTopics.isEmpty()) {
                 Text("Nothing due", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
@@ -1142,6 +1111,7 @@ private fun SavedTopicRow(
 @Composable
 private fun SettingsScreen(
     entries: List<ContentCatalogEntry>,
+    lessonIndex: LessonContentIndex,
     repository: NoorRepository,
     textScale: Float,
     onTextScaleChange: (Float) -> Unit,
@@ -1150,8 +1120,9 @@ private fun SettingsScreen(
     onOpenLearn: () -> Unit,
 ) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
-    val savedPacks = entries.mapNotNull(repository::loadPack)
-    val summary = repository.progressSummary(savedPacks)
+    val summary = repository.progressSummary(lessonIndex)
+    val savedLessonIds = repository.savedLessonIds()
+    val savedLessons = lessonIndex.lessons.filter { it.lessonId in savedLessonIds }
     val accuracy = if (summary.answeredQuestions == 0) "—" else "${summary.correctAnswers * 100 / summary.answeredQuestions}%"
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Profile", "", onBack)
@@ -1186,8 +1157,8 @@ private fun SettingsScreen(
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Outlined.Download, contentDescription = null, tint = NoorColors.Moss)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Download subjects", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text("Manage offline content", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                    Text("Browse lessons", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("Open any lesson to save it offline", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
                 }
                 Icon(Icons.Outlined.ArrowForward, contentDescription = "Open subjects", tint = NoorColors.Moss)
             }
@@ -1212,25 +1183,22 @@ private fun SettingsScreen(
                 },
             )
         }
-        Text("Saved lesson packs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-        val storedBytes = repository.downloadedBytes(entries)
-        Text(formatBytes(storedBytes), style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
-        entries.forEach { entry ->
-            val pack = repository.loadPack(entry)
-            if (pack != null) {
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, NoorColors.Mint)) {
-                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(entry.subject, fontWeight = FontWeight.SemiBold)
-                            Text("Version ${pack.contentVersion} · ${formatBytes(repository.packSize(entry))}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
-                        }
-                        IconButton(onClick = { repository.deletePack(entry); onDataChanged() }) {
-                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "Remove ${entry.subject} download", tint = NoorColors.Moss)
-                        }
+        Text("Saved lessons", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Text("${countLabel(savedLessons.size, "lesson")} · ${formatBytes(repository.savedLessonBytes())}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+        savedLessons.forEach { lesson ->
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, NoorColors.Mint)) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(lesson.title, fontWeight = FontWeight.SemiBold)
+                        Text("${lesson.subject} · ${lesson.topicTitle} · ${formatBytes(repository.lessonSize(lesson))}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+                    }
+                    IconButton(onClick = { repository.deleteLesson(lesson); onDataChanged() }) {
+                        Icon(Icons.Outlined.DeleteOutline, contentDescription = "Remove ${lesson.title} offline lesson", tint = NoorColors.Moss)
                     }
                 }
             }
         }
+        if (savedLessons.isEmpty()) Text("No lessons saved yet.", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
         Button(
             onClick = { confirmClear = true },
             modifier = Modifier.fillMaxWidth(),
@@ -1243,7 +1211,7 @@ private fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             title = { Text("Clear learning progress?") },
-            text = { Text("Progress and the study streak will be deleted. Saved lesson packs will stay.") },
+            text = { Text("Progress and the study streak will be deleted. Saved lessons will stay.") },
             confirmButton = {
                 TextButton(onClick = {
                     repository.clearProgress()
@@ -1257,12 +1225,15 @@ private fun SettingsScreen(
 }
 
 @Composable
-private fun QuizScreen(
+internal fun QuizScreen(
     pack: ContentPack,
     topic: ContentTopic,
     repository: NoorRepository,
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit,
+    onProgressChanged: () -> Unit,
+    cachedLessonCount: Int,
+    totalLessonCount: Int,
 ) {
     val questions = topic.lessons.flatMap { it.questions }
     var questionIndex by rememberSaveable(topic.id) { mutableIntStateOf(0) }
@@ -1270,6 +1241,7 @@ private fun QuizScreen(
     var correctCount by rememberSaveable(topic.id) { mutableIntStateOf(0) }
     var answered by rememberSaveable(topic.id) { mutableStateOf(false) }
     var showResult by rememberSaveable(topic.id) { mutableStateOf(false) }
+    var resultWasOffline by rememberSaveable(topic.id) { mutableStateOf(false) }
 
     if (questions.isEmpty()) {
         MissingContentScreen(onBack = onBack)
@@ -1280,6 +1252,12 @@ private fun QuizScreen(
             BackHeader("Practice complete", topic.title, onBack)
             Text("${correctCount * 100 / questions.size}%", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
             Text("$correctCount of ${questions.size} correct", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (resultWasOffline) "You are offline. This result is saved on this phone; account sync is not available yet."
+                else "Result saved on this device.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = NoorColors.MossDark,
+            )
             StatusBadge(
                 text = when {
                     correctCount * 100 / questions.size >= 80 -> "Strong work"
@@ -1295,6 +1273,9 @@ private fun QuizScreen(
     val question = questions[questionIndex]
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Quick Check", "${pack.subject} · ${topic.title}", onBack)
+        if (cachedLessonCount < totalLessonCount) {
+            Text("Questions from ${countLabel(cachedLessonCount, "saved lesson")} of ${countLabel(totalLessonCount, "lesson")}.", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
+        }
         Text("Question ${questionIndex + 1} of ${questions.size}", style = MaterialTheme.typography.bodyMedium, color = NoorColors.Ink.copy(alpha = 0.68f))
         LinearProgressIndicator(progress = (questionIndex + 1).toFloat() / questions.size, modifier = Modifier.fillMaxWidth(), color = NoorColors.Moss, trackColor = NoorColors.Mint)
         Text(question.prompt, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
@@ -1342,6 +1323,10 @@ private fun QuizScreen(
                     selectedAnswer = -1
                     answered = false
                 } else {
+                    resultWasOffline = !repository.hasValidatedConnection()
+                    repository.recordQuizResult(topic.id, correctCount, questions.size)
+                    repository.recordStudyActivity()
+                    onProgressChanged()
                     showResult = true
                 }
             },
@@ -1350,7 +1335,7 @@ private fun QuizScreen(
 }
 
 @Composable
-private fun MissingContentScreen(onBack: () -> Unit) {
+internal fun MissingContentScreen(onBack: () -> Unit) {
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Content unavailable", "", onBack)
         StatusBadge("Lesson not saved")
@@ -1359,7 +1344,7 @@ private fun MissingContentScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun ScreenColumn(
+internal fun ScreenColumn(
     modifier: Modifier = Modifier,
     safeDrawingInsets: Boolean = false,
     contentSpacing: Dp = 12.dp,
@@ -1418,7 +1403,7 @@ private fun ScreenHeader(
 }
 
 @Composable
-private fun BackHeader(title: String, subtitle: String, onBack: () -> Unit) {
+internal fun BackHeader(title: String, subtitle: String, onBack: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
         IconButton(onClick = onBack) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = NoorColors.MossDark) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

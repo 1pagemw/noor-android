@@ -42,6 +42,7 @@ data class ContentLesson(
     val sections: List<LessonSection>,
     val keyTerms: List<KeyTerm>,
     val questions: List<QuizQuestion>,
+    val isOfflineAvailable: Boolean = true,
 )
 
 data class LessonSection(val heading: String, val body: String)

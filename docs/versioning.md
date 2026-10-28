@@ -2,8 +2,8 @@
 
 ## Current app identity
 
-- `versionName`: `0.3.0`
-- `versionCode`: `3`
+- `versionName`: `0.4.0`
+- `versionCode`: `4`
 - First implemented pilot scope: Form 3 Biology and Physics
 - Debug APKs from GitHub Actions are test builds, not signed public releases.
 
@@ -22,4 +22,4 @@
 - **Minor** (for example, `0.2.0`): backward-compatible pilot functionality or new reviewed learning content.
 - **Major** (`1.0.0`): the first stable public release; after that, increment major only for breaking changes to app behavior, content format, or supported workflows.
 
-Content packs have their own integer `contentVersion` and SHA-256 checksum. Increment a pack’s `contentVersion` whenever its downloaded content changes; update the app catalogue checksum and pack metadata in the same Pull Request. An app release is not required for text-only pack updates when the catalogue remains compatible.
+Content packs and individual lesson units have an integer `contentVersion` and SHA-256 checksum. Increment the relevant content version whenever downloaded content changes; update the matching catalogue hash and metadata in the same Pull Request. An app release is not required for text-only content updates when the app's data format remains compatible.

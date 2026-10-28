@@ -17,8 +17,8 @@ android {
         applicationId = "mw.noor.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -68,6 +68,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

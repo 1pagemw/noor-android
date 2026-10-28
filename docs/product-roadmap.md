@@ -10,7 +10,7 @@ Noor should help secondary-school students in Malawi learn and revise curriculum
 4. Review topics that need another try.
 5. See progress and choose a useful next step.
 
-The `feature/android-scaffold` branch advances the Form 3 Biology and Physics pilot to v0.3.0. In addition to the offline learning loop and local progress, it uses three primary tabs, shows four summary metrics in Profile, distinguishes due-review cards from other saved topics, shades topic cards by lesson completion, adds an on-device study streak, and begins Phase 2 pack-lifecycle hardening. The starter packs contain six Biology topics and seven Physics topics, each with one short lesson and two questions.
+The `feature/android-scaffold` branch advances the Form 3 Biology and Physics pilot to v0.4.0. In addition to the offline learning loop and local progress, it uses three primary tabs, shows four summary metrics in Profile, distinguishes due-review cards from other saved topics, shades topic cards by lesson completion, adds an on-device study streak, and replaces whole-subject downloads with lesson-level units. The starter subjects contain six Biology topics and seven Physics topics, each with one short lesson and two questions.
 
 **Current status:** the code and draft packs are not yet an approved classroom pilot. Topic scope is provisional, the current official syllabus documents have not been verified, and no Malawi teacher has reviewed the lessons. CI and manual Android/offline device checks must pass before calling the alpha exit gate complete. See [`content scope and sources`](content/form3-scope.md) and [`versioning policy`](versioning.md).
 
@@ -30,7 +30,7 @@ Prepare the content model and local storage so a lesson pack can be updated with
 
 ### App versioning foundation
 
-The current development build advances the scaffold to `versionName = 0.3.0` and `versionCode = 3`. Keep `versionName` semantic and human-readable (`0.x.y` during pilot development; `1.0.0` for the first stable public release). Increase Android `versionCode` monotonically for every distributable build so a newer test build can update an older one. Tag release source with matching Git tags such as `v0.1.0` and `v1.0.0`.
+The current development build advances the scaffold to `versionName = 0.4.0` and `versionCode = 4`. Keep `versionName` semantic and human-readable (`0.x.y` during pilot development; `1.0.0` for the first stable public release). Increase Android `versionCode` monotonically for every distributable build so a newer test build can update an older one. Tag release source with matching Git tags such as `v0.1.0` and `v1.0.0`.
 
 The Actions workflow is for CI and debug APK artifacts. Repository builds use a stable development-only signing key from GitHub Secrets when available so newer development APKs can update earlier ones; this is not a production release key. Before distributing builds beyond the development team, add a separate release workflow that builds a signed APK/AAB from a version tag, creates release notes, and keeps debug and release builds clearly separate.
 
@@ -43,7 +43,7 @@ Deliver one complete, useful learning loop for the agreed pilot scope rather tha
 - First-run setup: select form and preferred content language; skip account creation and collect no unnecessary personal details.
 - Subject and topic library with clear curriculum labels and an obvious “continue learning” path.
 - Short lesson pages using lightweight text, diagrams, and examples; show key terms and a clear completion action.
-- Downloadable subject/topic packs with download progress, storage size, delete controls, and offline availability indicators.
+- Lesson-level downloads triggered on open, one next-lesson prefetch, per-lesson storage controls, and clear offline availability indicators; downloads may use Wi-Fi or mobile data.
 - Multiple-choice practice with immediate correct/incorrect feedback and a short explanation. Keep question content local with the lesson pack.
 - A local review queue for missed or due topics, with a simple repeat-practice flow.
 - Private on-device progress: completed lessons, recent practice, and a simple topic-level summary. Explain that progress is stored on the phone.
@@ -52,7 +52,7 @@ Deliver one complete, useful learning loop for the agreed pilot scope rather tha
 
 **Not in this phase:** sign-in, cloud sync, teacher dashboards, live classes, chat, public rankings, payments, or an AI tutor.
 
-**Alpha exit gate:** a student can download the pilot pack once, use lessons and quizzes in airplane mode, close and reopen the app without losing local progress, and understand why an answer is correct. A teacher has reviewed the pilot content.
+**Alpha exit gate:** a student can open lessons to save them, use saved lessons and quizzes in airplane mode, close and reopen the app without losing local progress, and understand why an answer is correct. A teacher has reviewed the pilot content.
 
 ## Phase 2 — school or community pilot
 
@@ -64,7 +64,8 @@ Run a time-bounded pilot with a small, consenting group of students and educator
 - Add opt-in, local study reminders only if students and educators want them; reminders must be easy to turn off.
 - The MVP now includes a lesson-level report composer. It opens Android's share chooser with form, subject, topic, lesson, content version, and optional student-entered details; Noor does not send automatically or attach account/device identity. Define an official teacher destination and report-handling process before pilot use.
 - **Implemented in v0.3.0 (initial reliability slice):** detect a newer catalogue pack while keeping the older downloaded version usable, stage and validate updates before replacing the installed file, recover backups after an interrupted swap, and check available storage before a download/update. The broader retry/offline/network and low-storage matrix still needs device testing.
-- Improve the remaining pack download recovery and verify safe handling of interrupted or intermittent connections on target devices.
+- **Implemented in v0.4.0 (lesson-level download slice):** bundle a metadata-only lesson catalogue, fetch individual lesson payloads on demand, queue a sequential next-lesson prefetch, allow connected Wi-Fi or mobile networks, validate SHA-256 and payload metadata before atomic install, migrate existing subject packs without deleting them until all lessons are safely extracted, and let students remove individual cached lessons in Profile. Offline completion messages state that progress remains on-device and that account sync is not available yet.
+- **Verification still required:** run Android CI and instrumentation tests; manually check airplane-mode behavior, worker retry and recovery, legacy-pack migration, prefetch, storage warnings, and deletion on target devices and intermittent connections.
 - Test large text, contrast, screen readers, small screens, low storage, slow or intermittent data, and airplane-mode behavior.
 
 Reminders, extra quiz formats, expanded glossary/search, official report routing, and curriculum approval remain gated on student/educator preference, pilot observations, or decisions from the local content reviewer; do not infer those requirements from the software implementation alone.

@@ -1,6 +1,8 @@
 package mw.noor.app.data
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -20,14 +22,140 @@ class NoorRepository(context: Context) {
     private val appContext = context.applicationContext
     private val preferences = appContext.getSharedPreferences("noor_local_v1", Context.MODE_PRIVATE)
     private val packsDirectory = File(appContext.filesDir, "content-packs").apply { mkdirs() }
+    private val lessonsDirectory = File(appContext.filesDir, "content-lessons").apply { mkdirs() }
     private val packFileInstaller = PackFileInstaller()
     private val catalog: List<ContentCatalogEntry> by lazy {
         appContext.assets.open("form3_catalog.json").bufferedReader().use { reader ->
             ContentJsonParser.parseCatalog(reader.readText())
         }
     }
+    private val lessonIndex: LessonContentIndex by lazy {
+        appContext.assets.open("lesson_catalog.json").bufferedReader().use { reader ->
+            LessonContentJsonParser.parseIndex(reader.readText())
+        }
+    }
 
     fun catalog(): List<ContentCatalogEntry> = catalog
+    fun lessonCatalog(): LessonContentIndex = lessonIndex.also { migrateLegacyPacks() }
+
+    fun lessonEntry(packId: String, topicId: String, lessonId: String): LessonIndexEntry? =
+        lessonIndex.lesson(packId, topicId, lessonId)
+
+    fun lessonEntry(lessonId: String): LessonIndexEntry? = lessonIndex.lesson(lessonId)
+
+    fun savedLessonIds(): Set<String> {
+        migrateLegacyPacks()
+        return lessonIndex.lessons.filter { loadStoredPayload(it) != null }.map { it.lessonId }.toSet()
+    }
+
+    fun savedLessonCount(packId: String): Int {
+        val subject = lessonIndex.subject(packId) ?: return 0
+        migrateLegacyPack(packId)
+        return subject.lessons.count { loadStoredPayload(it) != null }
+    }
+
+    fun savedLessonBytes(): Long {
+        migrateLegacyPacks()
+        return lessonIndex.lessons.sumOf { entry ->
+            lessonFile(entry).takeIf { loadStoredPayload(entry) != null }?.length() ?: 0L
+        }
+    }
+
+    fun lessonSize(entry: LessonIndexEntry): Long = lessonFile(entry).takeIf { it.isFile }?.length() ?: 0L
+
+    fun lessonStorageStatus(entry: LessonIndexEntry): PackStorageStatus {
+        val availableBytes = lessonsDirectory.usableSpace.takeIf { it > 0L }
+        val requiredBytes = entry.sizeBytes.coerceAtLeast(0L) + DOWNLOAD_STORAGE_RESERVE_BYTES
+        return PackStorageStatus(availableBytes, requiredBytes, hasDownloadSpace(availableBytes, requiredBytes))
+    }
+
+    fun loadLesson(entry: LessonIndexEntry): ContentLesson? {
+        migrateLegacyPack(entry.packId)
+        val file = lessonFile(entry)
+        if (!file.isFile) return null
+        return loadStoredPayload(entry)?.lesson
+    }
+
+    fun deleteLesson(entry: LessonIndexEntry): Boolean {
+        val file = lessonFile(entry)
+        packFileInstaller.recover(file)
+        return !file.exists() || file.delete()
+    }
+
+    suspend fun downloadLesson(
+        entry: LessonIndexEntry,
+        onProgress: suspend (percent: Int) -> Unit,
+    ): ContentLesson = withContext(Dispatchers.IO) {
+        val storage = lessonStorageStatus(entry)
+        check(storage.canDownload) {
+            "Not enough free storage to save this lesson safely. Free up space and try again."
+        }
+        var lastError: Throwable? = null
+        for (sourceUrl in entry.sourceUrls) {
+            var temporaryFile: File? = null
+            var connection: HttpURLConnection? = null
+            try {
+                val activeConnection = (URL(sourceUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15_000
+                    readTimeout = 30_000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.0")
+                    instanceFollowRedirects = true
+                }
+                connection = activeConnection
+                activeConnection.connect()
+                val response = activeConnection.responseCode
+                check(response in 200..299) { "Server returned HTTP $response" }
+                val contentLength = activeConnection.contentLengthLong
+                check(contentLength <= MAX_LESSON_BYTES) { "Lesson file is larger than the allowed limit." }
+                temporaryFile = File(lessonsDirectory, "${entry.packId}__${entry.lessonId}.json.tmp")
+                if (temporaryFile.exists()) temporaryFile.delete()
+                var received = 0L
+                FileOutputStream(temporaryFile).use { output ->
+                    activeConnection.inputStream.use { input ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            received += read
+                            check(received <= MAX_LESSON_BYTES) { "Lesson file is larger than the allowed limit." }
+                            output.write(buffer, 0, read)
+                            val percent = if (contentLength > 0L) {
+                                (received * 100L / contentLength).toInt().coerceIn(0, 99)
+                            } else 0
+                            onProgress(percent)
+                        }
+                        output.fd.sync()
+                    }
+                }
+                check(sha256(temporaryFile) == entry.sha256) { "Lesson verification failed. Check your connection and try again." }
+                val payload = LessonContentJsonParser.parsePayload(temporaryFile.readText())
+                validatePayload(entry, payload)
+                lessonFile(entry).parentFile?.mkdirs()
+                packFileInstaller.install(temporaryFile, lessonFile(entry))
+                onProgress(100)
+                return@withContext payload.lesson
+            } catch (error: Exception) {
+                temporaryFile?.delete()
+                if (error is CancellationException) throw error
+                lastError = error
+            } finally {
+                connection?.disconnect()
+            }
+        }
+        val failureDetails = generateSequence(lastError) { it.cause }
+            .mapNotNull { it.message }
+            .joinToString(" ")
+            .lowercase(Locale.ROOT)
+        val message = when {
+            "enospc" in failureDetails || "no space" in failureDetails ->
+                "The phone ran out of storage while saving this lesson. Free up space and try again."
+            lastError is IOException ->
+                "Download interrupted. Check your connection or available phone storage and try again."
+            else -> lastError?.message ?: "Unable to download this lesson. Check your connection and try again."
+        }
+        throw IllegalStateException(message, lastError)
+    }
 
     fun loadPack(entry: ContentCatalogEntry): ContentPack? {
         val file = packFile(entry.id)
@@ -68,7 +196,7 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.3.0")
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.0")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
@@ -134,6 +262,38 @@ class NoorRepository(context: Context) {
         return packFile(entry.id).let { !it.exists() || it.delete() }
     }
 
+    @Synchronized
+    fun migrateLegacyPacks() {
+        lessonIndex.subjects.forEach { migrateLegacyPack(it.id) }
+    }
+
+    @Synchronized
+    fun migrateLegacyPack(packId: String) {
+        val subject = lessonIndex.subject(packId) ?: return
+        val legacyFile = packFile(packId)
+        if (!legacyFile.isFile) return
+        val rawPack = runCatching { legacyFile.readText() }.getOrNull() ?: return
+        val parsedPack = runCatching { ContentJsonParser.parsePack(rawPack) }.getOrNull() ?: return
+        if (parsedPack.id != subject.id || parsedPack.form != subject.form || parsedPack.subject != subject.subject) return
+
+        subject.lessons.forEach { entry ->
+            val destination = lessonFile(entry)
+            if (loadStoredPayload(entry) != null) return@forEach
+            runCatching {
+                val payloadJson = LessonContentJsonParser.payloadFromLegacyPack(rawPack, entry)
+                val payload = LessonContentJsonParser.parsePayload(payloadJson)
+                validatePayload(entry, payload, allowOlderVersion = true)
+                val staged = File(lessonsDirectory, "${entry.packId}__${entry.lessonId}.migration.tmp")
+                FileOutputStream(staged).use { output ->
+                    output.write(payloadJson.toByteArray(Charsets.UTF_8))
+                    output.fd.sync()
+                }
+                packFileInstaller.install(staged, destination)
+            }
+        }
+        if (subject.lessons.all { loadStoredPayload(it) != null }) legacyFile.delete()
+    }
+
     fun downloadedBytes(entries: List<ContentCatalogEntry> = catalog): Long = entries.sumOf { entry ->
         packFile(entry.id).takeIf { it.isFile }?.length() ?: 0L
     }
@@ -155,6 +315,14 @@ class NoorRepository(context: Context) {
     fun language(): String = preferences.getString(KEY_LANGUAGE, "en") ?: "en"
     fun textScale(): Float = preferences.getFloat(KEY_TEXT_SCALE, 1f).coerceIn(0.9f, 1.3f)
     fun setTextScale(scale: Float) = preferences.edit().putFloat(KEY_TEXT_SCALE, scale.coerceIn(0.9f, 1.3f)).apply()
+
+    fun hasValidatedConnection(): Boolean {
+        val connectivity = appContext.getSystemService(ConnectivityManager::class.java) ?: return false
+        val network = connectivity.activeNetwork ?: return false
+        val capabilities = connectivity.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
 
     fun studyStreak(nowMillis: Long = System.currentTimeMillis()): StudyStreak {
         val today = localDayKey(nowMillis)
@@ -253,12 +421,19 @@ class NoorRepository(context: Context) {
     }
 
     fun progressSummary(packs: List<ContentPack>, nowMillis: Long = System.currentTimeMillis()): ProgressSummary {
-        val completed = completedLessonIds()
         val lessonIds = packs.flatMap { pack -> pack.topics.flatMap { topic -> topic.lessons.map { it.id } } }
+        val topicIds = packs.flatMap { it.topics }.map { it.id }.toSet()
+        return progressSummary(lessonIds, topicIds, nowMillis)
+    }
+
+    fun progressSummary(index: LessonContentIndex, nowMillis: Long = System.currentTimeMillis()): ProgressSummary =
+        progressSummary(index.lessons.map { it.lessonId }, index.subjects.flatMap { subject -> subject.topics.map { it.id } }.toSet(), nowMillis)
+
+    private fun progressSummary(lessonIds: List<String>, topicIds: Set<String>, nowMillis: Long): ProgressSummary {
+        val completed = completedLessonIds()
         var quizzes = 0
         var correct = 0
         var answered = 0
-        val topicIds = packs.flatMap { it.topics }.map { it.id }.toSet()
         val root = readTopicStats()
         topicIds.forEach { id ->
             val stats = root.optJSONObject(id) ?: return@forEach
@@ -296,6 +471,24 @@ class NoorRepository(context: Context) {
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(nowMillis))
 
     private fun packFile(id: String) = File(packsDirectory, "$id.json")
+    private fun lessonFile(entry: LessonIndexEntry) = File(lessonsDirectory, "${entry.packId}__${entry.lessonId}.json")
+
+    private fun loadStoredPayload(entry: LessonIndexEntry): LessonPayload? {
+        val file = lessonFile(entry)
+        packFileInstaller.recover(file)
+        if (!file.isFile) return null
+        return runCatching {
+            LessonContentJsonParser.parsePayload(file.readText()).also { validatePayload(entry, it, allowOlderVersion = true) }
+        }.getOrNull()
+    }
+
+    private fun validatePayload(entry: LessonIndexEntry, payload: LessonPayload, allowOlderVersion: Boolean = false) {
+        require(payload.packId == entry.packId)
+        require(payload.form == entry.form && payload.subject == entry.subject)
+        require(payload.topicId == entry.topicId && payload.topicTitle == entry.topicTitle)
+        require(payload.lesson.id == entry.lessonId && payload.lesson.title == entry.title)
+        require(if (allowOlderVersion) payload.contentVersion in 1..entry.contentVersion else payload.contentVersion == entry.contentVersion)
+    }
 
     private fun sha256(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -323,6 +516,7 @@ class NoorRepository(context: Context) {
         private const val KEY_STREAK_LAST_ACTIVITY_DAY = "streak_last_activity_day"
         private const val KEY_STREAK_DAYS = "streak_days"
         private const val MAX_PACK_BYTES = 2L * 1024L * 1024L
+        private const val MAX_LESSON_BYTES = 1L * 1024L * 1024L
         private const val DOWNLOAD_STORAGE_RESERVE_BYTES = 64L * 1024L
         private const val SUCCESS_THRESHOLD = 0.8f
     }

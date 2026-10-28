@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_biology",
+  "form": 3,
+  "subject": "Biology",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "bio_ecosystems",
+  "topicTitle": "Ecosystem basics",
+  "topicDescription": "Organisms, habitats, food chains, and energy flow.",
+  "lesson": {
+    "id": "bio_ecosystems_intro",
+    "title": "How organisms interact",
+    "readTimeMinutes": 6,
+    "sections": [
+      {
+        "heading": "Ecosystems",
+        "body": "A habitat is a place where an organism lives. A population is a group of organisms of one species in an area; a community is all the populations there. An ecosystem includes the community and the non-living environment, such as water, soil, light, and temperature, and their interactions."
+      },
+      {
+        "heading": "Food chains and energy",
+        "body": "Producers, such as green plants, make organic food. Consumers obtain food by eating other organisms, while decomposers break down dead material and return nutrients to the environment. In a food-chain diagram, an arrow points from the organism eaten to the organism that eats it, showing the direction of energy transfer. Less energy is available at each higher trophic level."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Ecosystem",
+        "definition": "A community of organisms and the non-living environment with which they interact."
+      },
+      {
+        "term": "Producer",
+        "definition": "An organism that makes organic food, usually using photosynthesis."
+      },
+      {
+        "term": "Decomposer",
+        "definition": "An organism that breaks down dead organic material."
+      }
+    ],
+    "questions": [
+      {
+        "id": "bio_ecosystems_q1",
+        "prompt": "Which organism is usually a producer in a terrestrial food chain?",
+        "options": [
+          "Green plant",
+          "Herbivore",
+          "Carnivore",
+          "Fungus"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "Green plants make organic food using photosynthesis and are producers."
+      },
+      {
+        "id": "bio_ecosystems_q2",
+        "prompt": "In grass → grasshopper → frog, what does the arrow from grass to grasshopper show?",
+        "options": [
+          "The direction of energy transfer",
+          "The direction of movement",
+          "Which organism is largest",
+          "The amount of rainfall"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "The arrow points from the food to the consumer and shows the direction in which energy is transferred."
+      }
+    ]
+  }
+}
