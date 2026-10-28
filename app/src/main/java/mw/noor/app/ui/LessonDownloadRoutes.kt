@@ -52,7 +52,7 @@ internal fun LessonDownloadRoute(
     val lesson = remember(entry.lessonId, work?.id, work?.state) { repository.loadLesson(entry) }
 
     LaunchedEffect(entry.lessonId, lesson, work?.id, work?.state) {
-        if (lesson == null && work == null) LessonDownloadWork.enqueueRequested(context, entry)
+        if (lesson == null && work.shouldStartDownload()) LessonDownloadWork.enqueueRequested(context, entry)
         if (lesson != null && work?.state == WorkInfo.State.SUCCEEDED) onProgressChanged()
     }
 
@@ -107,7 +107,7 @@ internal fun TopicQuizRoute(
     val cachedLessons = topic.lessons.mapNotNull { entry -> repository.loadLesson(entry) }
 
     LaunchedEffect(firstLesson?.lessonId, cachedLessons.size, work?.id, work?.state) {
-        if (cachedLessons.isEmpty() && firstLesson != null && work == null) {
+        if (cachedLessons.isEmpty() && firstLesson != null && work.shouldStartDownload()) {
             LessonDownloadWork.enqueueRequested(context, firstLesson)
         }
         if (cachedLessons.isNotEmpty() && work?.state == WorkInfo.State.SUCCEEDED) onProgressChanged()
@@ -194,6 +194,9 @@ private fun List<WorkInfo>.currentDownload(): WorkInfo? =
     firstOrNull { it.state == WorkInfo.State.RUNNING }
         ?: firstOrNull { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED }
         ?: firstOrNull()
+
+private fun WorkInfo?.shouldStartDownload(): Boolean =
+    this == null || this.state == WorkInfo.State.SUCCEEDED || this.state == WorkInfo.State.CANCELLED
 
 private fun LessonSubjectIndex.toPack(topics: List<ContentTopic>): ContentPack = ContentPack(
     id = id,
