@@ -65,11 +65,11 @@ object LessonDownloadWork {
             .addTag(if (isPrefetch) PREFETCH_TAG else "noor.lesson.requested")
             .build()
 
-    internal fun isPrefetch(parameters: WorkerParameters): Boolean =
-        parameters.inputData.getBoolean(PREFETCH_INPUT, false)
+    internal fun isPrefetch(data: Data): Boolean =
+        data.getBoolean(PREFETCH_INPUT, false)
 
-    internal fun lessonId(parameters: WorkerParameters): String? =
-        parameters.inputData.getString(LESSON_ID_INPUT)
+    internal fun lessonId(data: Data): String? =
+        data.getString(LESSON_ID_INPUT)
 }
 
 class LessonDownloadWorker(
@@ -77,8 +77,8 @@ class LessonDownloadWorker(
     workerParameters: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParameters) {
     override suspend fun doWork(): Result {
-        val lessonId = LessonDownloadWork.lessonId(workerParameters) ?: return Result.failure()
-        val isPrefetch = LessonDownloadWork.isPrefetch(workerParameters)
+        val lessonId = LessonDownloadWork.lessonId(inputData) ?: return Result.failure()
+        val isPrefetch = LessonDownloadWork.isPrefetch(inputData)
         val repository = NoorRepository(applicationContext)
         val entry = repository.lessonEntry(lessonId) ?: return Result.failure()
 
