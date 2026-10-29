@@ -1,8 +1,8 @@
 package mw.noor.app.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -37,17 +37,17 @@ class SettingsPrivacyTest {
 
     @Test
     fun settingsExplainLocalProgressStorageAndDeletion() {
-        composeRule.onNodeWithText("Draft · teacher review").assertDoesNotExist()
+        assertTrue(composeRule.onAllNodesWithText("Draft · teacher review").fetchSemanticsNodes().isEmpty())
         composeRule.onNodeWithText("Get started").performClick()
 
         composeRule.onNodeWithText("Today").assertIsDisplayed()
         composeRule.onNodeWithText("Learn").assertIsDisplayed()
         composeRule.onNodeWithText("Review").assertIsDisplayed()
         composeRule.onNodeWithText("Learn").performClick()
-        composeRule.onNodeWithText("Draft content").assertDoesNotExist()
-        composeRule.onNodeWithText("Lessons are awaiting local teacher review.").assertDoesNotExist()
+        assertTrue(composeRule.onAllNodesWithText("Draft content").fetchSemanticsNodes().isEmpty())
+        assertTrue(composeRule.onAllNodesWithText("Lessons are awaiting local teacher review.").fetchSemanticsNodes().isEmpty())
         composeRule.onNodeWithText("Biology").performClick()
-        composeRule.onNodeWithText("Draft — local teacher review needed").assertDoesNotExist()
+        assertTrue(composeRule.onAllNodesWithText("Draft — local teacher review needed").fetchSemanticsNodes().isEmpty())
         composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.onNodeWithText("Today").performClick()
         composeRule.onNodeWithContentDescription("Study streak: 0 days").performClick()
@@ -56,7 +56,7 @@ class SettingsPrivacyTest {
 
         composeRule.onNodeWithText("Review").performClick()
         composeRule.onNodeWithText("Your review list is empty").assertIsDisplayed()
-        composeRule.onNodeWithText("Nothing due", substring = true).assertDoesNotExist()
+        assertTrue(composeRule.onAllNodesWithText("Nothing due", substring = true).fetchSemanticsNodes().isEmpty())
         composeRule.onNodeWithText("Today").performClick()
 
         composeRule.onNodeWithContentDescription("Profile and settings").performClick()
