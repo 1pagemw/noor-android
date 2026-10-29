@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Home
@@ -55,6 +56,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -80,6 +82,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -440,6 +444,7 @@ private fun TodayScreen(
     onContinueLesson: (mw.noor.app.data.LastLesson) -> Unit,
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    var showAllSearchResults by rememberSaveable { mutableStateOf(false) }
     var showStreakInfo by rememberSaveable { mutableStateOf(false) }
     val lessonTargets = remember(downloadedPacks, entries) {
         downloadedPacks.flatMap { pack ->
@@ -448,9 +453,10 @@ private fun TodayScreen(
         }
     }
     val query = searchQuery.trim().lowercase(Locale.ROOT)
-    val searchResults = if (query.isBlank()) emptyList() else lessonTargets.filter { target ->
+    val matchingSearchResults = if (query.isBlank()) emptyList() else lessonTargets.filter { target ->
         listOf(target.entry.subject, target.topic.title, target.lesson.title).any { it.lowercase(Locale.ROOT).contains(query) }
-    }.take(6)
+    }
+    val searchResults = visibleSearchResults(matchingSearchResults, showAllSearchResults)
     val lastLesson = repository.lastLesson()
     val continueTarget = lastLesson?.let { last ->
         lessonTargets.firstOrNull {
@@ -477,7 +483,10 @@ private fun TodayScreen(
         )
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { searchQuery = it },
+            onValueChange = {
+                searchQuery = it
+                showAllSearchResults = false
+            },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search lessons, topics…") },
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = NoorColors.MossDark) },
@@ -499,6 +508,14 @@ private fun TodayScreen(
                 searchResults.forEach { target ->
                     LessonTargetCard(target, completed = target.lesson.id in completedLessons) {
                         onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id))
+                    }
+                }
+                if (matchingSearchResults.size > 6) {
+                    TextButton(
+                        onClick = { showAllSearchResults = !showAllSearchResults },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+                    ) {
+                        Text(if (showAllSearchResults) "Show fewer" else "Show all ${matchingSearchResults.size} results")
                     }
                 }
             }
@@ -570,7 +587,7 @@ private fun ContinueLearningCard(target: HomeLessonTarget, isContinue: Boolean, 
                 Text("${target.entry.subject} · ${target.topic.title}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
                 Text(target.lesson.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, maxLines = 2)
                 Text(
-                    if (target.lesson.isOfflineAvailable) "READY OFFLINE" else "SAVES TO THIS DEVICE WHEN OPENED",
+                    lessonAvailabilityLabel(target.lesson.isOfflineAvailable),
                     style = MaterialTheme.typography.labelSmall,
                     color = NoorColors.Mint,
                 )
@@ -666,7 +683,7 @@ private fun LessonTargetCard(target: HomeLessonTarget, completed: Boolean, onCli
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(target.lesson.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "${target.entry.subject} · ${target.topic.title} · ${if (target.lesson.isOfflineAvailable) "Saved offline" else "Downloads on open"}",
+                    "${target.entry.subject} · ${target.topic.title} · ${lessonAvailabilityLabel(target.lesson.isOfflineAvailable)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NoorColors.Ink.copy(alpha = 0.68f),
                 )
@@ -838,7 +855,7 @@ private fun TopicCard(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(lesson.title, style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            if (lesson.isOfflineAvailable) "Saved offline" else "Downloads when opened",
+                            lessonAvailabilityLabel(lesson.isOfflineAvailable),
                             style = MaterialTheme.typography.labelSmall,
                             color = NoorColors.MossDark,
                         )
@@ -874,7 +891,9 @@ internal fun LessonScreen(
     onProgressChanged: () -> Unit,
 ) {
     var completed by remember(lesson.id) { mutableStateOf(lesson.id in repository.completedLessonIds()) }
-    var completedOffline by rememberSaveable(lesson.id) { mutableStateOf(false) }
+    var completedOffline by rememberSaveable(lesson.id) {
+        mutableStateOf(repository.wasLessonCompletedOffline(lesson.id))
+    }
     val lessonPosition = (topic.lessons.indexOfFirst { it.id == lesson.id } + 1).coerceAtLeast(0)
     val lessonTotal = topic.lessons.size.coerceAtLeast(1)
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
@@ -935,7 +954,7 @@ internal fun LessonScreen(
             TextButton(
                 onClick = {
                     completedOffline = !repository.hasValidatedConnection()
-                    repository.markLessonCompleted(lesson.id)
+                    repository.markLessonCompleted(lesson.id, completedOffline = completedOffline)
                     repository.recordStudyActivity()
                     completed = true
                     onProgressChanged()
@@ -1054,7 +1073,6 @@ private fun DueReviewCard(
     onStartReview: (ContentCatalogEntry, ContentTopic) -> Unit,
 ) {
     Card(
-        onClick = { onStartReview(entry, topic) },
         colors = CardDefaults.cardColors(containerColor = NoorColors.Mint),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, NoorColors.Moss),
@@ -1120,6 +1138,7 @@ private fun SettingsScreen(
     onOpenLearn: () -> Unit,
 ) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
+    var deletionFailureTitle by rememberSaveable { mutableStateOf<String?>(null) }
     val summary = repository.progressSummary(lessonIndex)
     val savedLessonIds = repository.savedLessonIds()
     val savedLessons = lessonIndex.lessons.filter { it.lessonId in savedLessonIds }
@@ -1145,8 +1164,8 @@ private fun SettingsScreen(
             MetricCard(accuracy, "practice accuracy", Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricCard(summary.quizzesCompleted.toString(), countLabel(summary.quizzesCompleted, "practice session"), Modifier.weight(1f))
-            MetricCard(summary.dueTopicIds.size.toString(), "${countLabel(summary.dueTopicIds.size, "topic")} due", Modifier.weight(1f))
+            MetricCard(summary.quizzesCompleted.toString(), if (summary.quizzesCompleted == 1) "practice session" else "practice sessions", Modifier.weight(1f))
+            MetricCard(summary.dueTopicIds.size.toString(), if (summary.dueTopicIds.size == 1) "topic due" else "topics due", Modifier.weight(1f))
         }
         Card(
             onClick = onOpenLearn,
@@ -1177,6 +1196,11 @@ private fun SettingsScreen(
                 value = textScale,
                 onValueChange = onTextScaleChange,
                 valueRange = 0.9f..1.3f,
+                colors = SliderDefaults.colors(
+                    thumbColor = NoorColors.Moss,
+                    activeTrackColor = NoorColors.Moss,
+                    inactiveTrackColor = NoorColors.Mint,
+                ),
                 modifier = Modifier.semantics {
                     contentDescription = "Text size control"
                     stateDescription = "${(textScale * 100).roundToInt()} percent"
@@ -1192,11 +1216,18 @@ private fun SettingsScreen(
                         Text(lesson.title, fontWeight = FontWeight.SemiBold)
                         Text("${lesson.subject} · ${lesson.topicTitle} · ${formatBytes(repository.lessonSize(lesson))}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
                     }
-                    IconButton(onClick = { repository.deleteLesson(lesson); onDataChanged() }) {
+                    IconButton(onClick = {
+                        val deleted = repository.deleteLesson(lesson)
+                        deletionFailureTitle = if (deleted) null else lesson.title
+                        if (deleted) onDataChanged()
+                    }) {
                         Icon(Icons.Outlined.DeleteOutline, contentDescription = "Remove ${lesson.title} offline lesson", tint = NoorColors.Moss)
                     }
                 }
             }
+        }
+        deletionFailureTitle?.let { title ->
+            Text("Could not remove $title offline copy. Try again.", style = MaterialTheme.typography.bodySmall, color = NoorColors.Error)
         }
         if (savedLessons.isEmpty()) Text("No lessons saved yet.", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
         Button(
@@ -1211,7 +1242,7 @@ private fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             title = { Text("Clear learning progress?") },
-            text = { Text("Progress and the study streak will be deleted. Saved lessons will stay.") },
+            text = { Text("Progress, the study streak, and your Continue Learning position will be deleted. Saved lessons will stay.") },
             confirmButton = {
                 TextButton(onClick = {
                     repository.clearProgress()
@@ -1286,9 +1317,18 @@ internal fun QuizScreen(
             Surface(
                 onClick = { if (!answered) selectedAnswer = index },
                 enabled = !answered,
+                modifier = Modifier.semantics(mergeDescendants = true) {
+                    selected = isSelected
+                    stateDescription = when {
+                        answered && isCorrectAnswer -> "Correct answer"
+                        answered && isWrongSelected -> "Your answer, incorrect"
+                        isSelected -> "Selected"
+                        else -> "Not selected"
+                    }
+                },
                 color = if (isSelected || isCorrectAnswer) NoorColors.Mint else Color.White,
                 shape = RoundedCornerShape(17.dp),
-                border = BorderStroke(if (isSelected || isCorrectAnswer) 2.dp else 1.dp, if (isWrongSelected) Color(0xFFC65A4A) else if (isSelected || isCorrectAnswer) NoorColors.Moss else NoorColors.Mint),
+                border = BorderStroke(if (isSelected || isCorrectAnswer) 2.dp else 1.dp, if (isWrongSelected) NoorColors.Error else if (isSelected || isCorrectAnswer) NoorColors.Moss else NoorColors.Mint),
             ) {
                 Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Surface(color = if (isSelected || isCorrectAnswer) NoorColors.Moss else NoorColors.Canvas, shape = CircleShape, modifier = Modifier.size(34.dp)) {
@@ -1296,16 +1336,19 @@ internal fun QuizScreen(
                     }
                     Text(option, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                     if (isCorrectAnswer) Icon(Icons.Outlined.CheckCircle, contentDescription = "Correct answer", tint = NoorColors.Moss)
+                    if (isWrongSelected) Icon(Icons.Outlined.Close, contentDescription = "Incorrect answer", tint = NoorColors.Error)
                 }
             }
         }
         if (answered) {
             val correct = question.isCorrect(selectedAnswer)
-            InfoCard(
-                title = if (correct) "That's correct" else "Not quite",
-                body = question.explanation,
-                icon = if (correct) Icons.Outlined.CheckCircle else Icons.Outlined.Info,
-            )
+            Box(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                InfoCard(
+                    title = if (correct) "That's correct" else "Not quite",
+                    body = question.explanation,
+                    icon = if (correct) Icons.Outlined.CheckCircle else Icons.Outlined.Info,
+                )
+            }
         }
         PrimaryButton(
             text = when {
@@ -1444,7 +1487,13 @@ private fun StatusBadge(text: String) {
 }
 
 @Composable
-private fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true, minHeight: Dp = 52.dp) {
+internal fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    minHeight: Dp = 52.dp,
+    showArrow: Boolean = true,
+) {
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -1453,8 +1502,10 @@ private fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = 
         colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White, disabledContainerColor = NoorColors.Mint, disabledContentColor = NoorColors.MossDark),
     ) {
         Text(text, modifier = Modifier.padding(vertical = 5.dp), fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.width(8.dp))
-        Icon(Icons.Outlined.ArrowForward, contentDescription = null)
+        if (showArrow) {
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Outlined.ArrowForward, contentDescription = null)
+        }
     }
 }
 
@@ -1478,6 +1529,12 @@ private fun SettingLine(title: String, value: String) {
 
 internal fun countLabel(count: Int, singular: String, plural: String = "${singular}s"): String =
     "$count ${if (count == 1) singular else plural}"
+
+internal fun lessonAvailabilityLabel(isOfflineAvailable: Boolean): String =
+    if (isOfflineAvailable) "Saved offline" else "Downloads when opened"
+
+internal fun <T> visibleSearchResults(results: List<T>, showAll: Boolean, limit: Int = 6): List<T> =
+    if (showAll) results else results.take(limit.coerceAtLeast(0))
 
 private fun formatBytes(bytes: Long): String = when {
     bytes < 1024L -> "$bytes B"

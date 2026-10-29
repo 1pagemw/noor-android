@@ -51,8 +51,13 @@ class SettingsPrivacyTest {
         ).assertIsDisplayed()
         composeRule.onNodeWithText("lessons complete").assertIsDisplayed()
         composeRule.onNodeWithText("practice accuracy").assertIsDisplayed()
-        composeRule.onNodeWithText("0 practice sessions").assertIsDisplayed()
-        composeRule.onNodeWithText("0 topics due").assertIsDisplayed()
+        composeRule.onNodeWithText("practice sessions").assertIsDisplayed()
+        composeRule.onNodeWithText("topics due").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Text size control").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Clear learning progress").performScrollTo().performClick()
+        composeRule.onNodeWithText(
+            "Progress, the study streak, and your Continue Learning position will be deleted. Saved lessons will stay.",
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").performClick()
     }
 }

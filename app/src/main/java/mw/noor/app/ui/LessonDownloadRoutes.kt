@@ -4,10 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,7 +14,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
@@ -52,7 +48,7 @@ internal fun LessonDownloadRoute(
     val lesson = remember(entry.lessonId, work?.id, work?.state) { repository.loadLesson(entry) }
 
     LaunchedEffect(entry.lessonId, lesson, work?.id, work?.state) {
-        if (lesson == null && work.shouldStartDownload()) LessonDownloadWork.enqueueRequested(context, entry)
+        if (lesson == null && shouldAutomaticallyStartDownload(work?.state)) LessonDownloadWork.enqueueRequested(context, entry)
         if (lesson != null && work?.state == WorkInfo.State.SUCCEEDED) onProgressChanged()
     }
 
@@ -107,7 +103,7 @@ internal fun TopicQuizRoute(
     val cachedLessons = topic.lessons.mapNotNull { entry -> repository.loadLesson(entry) }
 
     LaunchedEffect(firstLesson?.lessonId, cachedLessons.size, work?.id, work?.state) {
-        if (cachedLessons.isEmpty() && firstLesson != null && work.shouldStartDownload()) {
+        if (cachedLessons.isEmpty() && firstLesson != null && shouldAutomaticallyStartDownload(work?.state)) {
             LessonDownloadWork.enqueueRequested(context, firstLesson)
         }
         if (cachedLessons.isNotEmpty() && work?.state == WorkInfo.State.SUCCEEDED) onProgressChanged()
@@ -152,21 +148,11 @@ private fun DownloadWaitingScreen(
         when (state) {
             WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> {
                 Text(work.outputData.getString("error") ?: "The lesson could not be downloaded.", color = NoorColors.MossDark)
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                    shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White),
-                ) { Text("Retry download") }
+                PrimaryButton(text = "Retry download", onClick = onRetry, showArrow = false)
             }
             WorkInfo.State.SUCCEEDED -> {
                 Text("The lesson could not be verified on this device. Try downloading it again.", color = NoorColors.MossDark)
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                    shape = MaterialTheme.shapes.large,
-                    colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White),
-                ) { Text("Try again") }
+                PrimaryButton(text = "Try again", onClick = onRetry, showArrow = false)
             }
             else -> {
                 if (state == WorkInfo.State.RUNNING && percent > 0) {
@@ -195,8 +181,8 @@ private fun List<WorkInfo>.currentDownload(): WorkInfo? =
         ?: firstOrNull { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED }
         ?: firstOrNull()
 
-private fun WorkInfo?.shouldStartDownload(): Boolean =
-    this == null || this.state == WorkInfo.State.SUCCEEDED || this.state == WorkInfo.State.CANCELLED
+internal fun shouldAutomaticallyStartDownload(state: WorkInfo.State?): Boolean =
+    state == null || state == WorkInfo.State.CANCELLED
 
 private fun LessonSubjectIndex.toPack(topics: List<ContentTopic>): ContentPack = ContentPack(
     id = id,

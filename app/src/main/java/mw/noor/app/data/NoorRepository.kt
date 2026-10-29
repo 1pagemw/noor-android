@@ -100,7 +100,7 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.1")
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.2")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
@@ -197,7 +197,7 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.1")
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.2")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
@@ -387,9 +387,18 @@ class NoorRepository(context: Context) {
 
     fun completedLessonIds(): Set<String> = preferences.getStringSet(KEY_COMPLETED_LESSONS, emptySet()).orEmpty().toSet()
 
-    fun markLessonCompleted(lessonId: String) {
-        val updated = completedLessonIds().toMutableSet().apply { add(lessonId) }
-        preferences.edit().putStringSet(KEY_COMPLETED_LESSONS, updated).apply()
+    fun wasLessonCompletedOffline(lessonId: String): Boolean =
+        lessonId in preferences.getStringSet(KEY_OFFLINE_COMPLETED_LESSONS, emptySet()).orEmpty()
+
+    fun markLessonCompleted(lessonId: String, completedOffline: Boolean) {
+        val completed = completedLessonIds().toMutableSet().apply { add(lessonId) }
+        val offlineCompleted = preferences.getStringSet(KEY_OFFLINE_COMPLETED_LESSONS, emptySet()).orEmpty().toMutableSet()
+        if (completedOffline) offlineCompleted.add(lessonId) else offlineCompleted.remove(lessonId)
+
+        val editor = preferences.edit().putStringSet(KEY_COMPLETED_LESSONS, completed)
+        if (offlineCompleted.isEmpty()) editor.remove(KEY_OFFLINE_COMPLETED_LESSONS)
+        else editor.putStringSet(KEY_OFFLINE_COMPLETED_LESSONS, offlineCompleted)
+        editor.apply()
     }
 
     fun saveLastLesson(lastLesson: LastLesson) {
@@ -481,6 +490,7 @@ class NoorRepository(context: Context) {
     fun clearProgress() {
         preferences.edit()
             .remove(KEY_COMPLETED_LESSONS)
+            .remove(KEY_OFFLINE_COMPLETED_LESSONS)
             .remove(KEY_TOPIC_STATS)
             .remove(KEY_LAST_PACK)
             .remove(KEY_LAST_TOPIC)
@@ -536,6 +546,7 @@ class NoorRepository(context: Context) {
         private const val KEY_LANGUAGE = "content_language"
         private const val KEY_TEXT_SCALE = "text_scale"
         private const val KEY_COMPLETED_LESSONS = "completed_lessons"
+        private const val KEY_OFFLINE_COMPLETED_LESSONS = "offline_completed_lessons"
         private const val KEY_TOPIC_STATS = "topic_stats"
         private const val KEY_LAST_PACK = "last_pack"
         private const val KEY_LAST_TOPIC = "last_topic"

@@ -7,12 +7,28 @@ import mw.noor.app.ui.lessonCompletionFraction
 import mw.noor.app.ui.topicProgressFractions
 import mw.noor.app.data.currentStudyStreak
 import mw.noor.app.data.nextStudyStreak
+import androidx.work.WorkInfo
+import mw.noor.app.ui.lessonAvailabilityLabel
+import mw.noor.app.ui.shouldAutomaticallyStartDownload
+import mw.noor.app.ui.visibleSearchResults
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RouteAndProgressTest {
+    @Test
+    fun automaticDownloadStartsOnlyWhenWorkIsMissingOrCancelled() {
+        assertTrue(shouldAutomaticallyStartDownload(null))
+        assertTrue(shouldAutomaticallyStartDownload(WorkInfo.State.CANCELLED))
+        assertFalse(shouldAutomaticallyStartDownload(WorkInfo.State.ENQUEUED))
+        assertFalse(shouldAutomaticallyStartDownload(WorkInfo.State.RUNNING))
+        assertFalse(shouldAutomaticallyStartDownload(WorkInfo.State.SUCCEEDED))
+        assertFalse(shouldAutomaticallyStartDownload(WorkInfo.State.FAILED))
+        assertFalse(shouldAutomaticallyStartDownload(WorkInfo.State.BLOCKED))
+    }
+
     @Test
     fun backReturnsThroughTheVisitedScreens() {
         var state = RouteHistory.initial()
@@ -83,6 +99,20 @@ class RouteAndProgressTest {
         assertEquals("2 topics", countLabel(2, "topic"))
         assertEquals("1 practice session", countLabel(1, "practice session"))
         assertEquals("0 practice sessions", countLabel(0, "practice session"))
+    }
+
+    @Test
+    fun lessonAvailabilityUsesConsistentCachedAndUncachedLabels() {
+        assertEquals("Saved offline", lessonAvailabilityLabel(true))
+        assertEquals("Downloads when opened", lessonAvailabilityLabel(false))
+    }
+
+    @Test
+    fun searchResultsCanExpandPastInitialLimit() {
+        val matches = (1..8).toList()
+
+        assertEquals(matches.take(6), visibleSearchResults(matches, showAll = false))
+        assertEquals(matches, visibleSearchResults(matches, showAll = true))
     }
 
     @Test

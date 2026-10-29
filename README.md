@@ -1,8 +1,8 @@
 # Noor Android
 
-Noor is a native Android learning app for secondary school students in Malawi. Version `0.4.1` is the Form 3 Biology and Physics development pilot. It follows the palette in [`docs/design-system.md`](docs/design-system.md) and keeps the screen references in [`docs/design/`](docs/design/).
+Noor is a native Android learning app for secondary school students in Malawi. Version `0.4.2` is the Form 3 Biology and Physics development pilot. It follows the palette in [`docs/design-system.md`](docs/design-system.md) and keeps the screen references in [`docs/design/`](docs/design/).
 
-## What works in v0.4.1
+## What works in v0.4.2
 
 - First-run setup for the Form 3, English-language pilot; no account is required.
 - Metadata-only Biology and Physics catalogues with independently downloaded lesson units over HTTPS.
@@ -13,6 +13,9 @@ Noor is a native Android learning app for secondary school students in Malawi. V
 - Profile controls to remove individual offline lessons or clear progress while retaining saved content.
 - Three-tab navigation, private profile statistics, due-review cards, and progress-shaded topic cards.
 - Local study streak tracking after lesson completion or finished practice.
+- Consistent offline-availability labels, expandable search results, non-duplicated Profile metrics, and a single Review action per due topic.
+- Accessible quiz selection and answer feedback; offline lesson completion notices persist when the lesson is reopened.
+- Profile text-size controls and retry actions use the app palette and shared button treatment; saved-lesson removal failures are surfaced.
 - Legacy subject-pack migration validates both the installed file and its backup, uses a valid backup when the primary is corrupt, and verifies current-version SHA-256 before extraction; source files remain until migration completes.
 - Per-lesson storage checks and staged file replacement that preserves the current copy if an update fails.
 
@@ -35,7 +38,7 @@ GitHub Actions runs the content validator and Android unit tests, builds a debug
 
 ## Versioning and GitHub workflow
 
-Android `versionName` is `0.4.1` and `versionCode` is `5`. Keep `versionName` semantic and increase `versionCode` monotonically for each distributable build. CI debug APKs use the stable development signing key; this is not a production signing configuration. Signed release builds, Git tags, and Play-ready bundles will be added before wider distribution; signing keys belong in GitHub Secrets, never in the repository.
+Android `versionName` is `0.4.2` and `versionCode` is `6`. Keep `versionName` semantic and increase `versionCode` monotonically for each distributable build. CI debug APKs use the stable development signing key; this is not a production signing configuration. Signed release builds, Git tags, and Play-ready bundles will be added before wider distribution; signing keys belong in GitHub Secrets, never in the repository.
 
 The repository is public. Changes should use feature branches and Pull Requests. `main` requires a passing `android-verify-build` check and resolved Pull Request conversations; force-pushes and branch deletion are disabled. Issues, Dependabot, and the Pull Request template support project planning and maintenance.
 

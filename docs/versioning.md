@@ -2,8 +2,8 @@
 
 ## Current app identity
 
-- `versionName`: `0.4.1`
-- `versionCode`: `5`
+- `versionName`: `0.4.2`
+- `versionCode`: `6`
 - First implemented pilot scope: Form 3 Biology and Physics
 - Debug APKs from GitHub Actions are test builds, not signed public releases.
 
