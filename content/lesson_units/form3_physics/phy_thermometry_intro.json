@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "phy_thermometry",
+  "topicTitle": "Thermometry",
+  "topicDescription": "Temperature, thermometer readings, and calibration ideas.",
+  "lesson": {
+    "id": "phy_thermometry_intro",
+    "title": "Measuring temperature",
+    "readTimeMinutes": 5,
+    "sections": [
+      {
+        "heading": "Temperature",
+        "body": "Temperature describes how hot or cold a body is and is related to the average kinetic energy of its particles. Heat is energy transferred because of a temperature difference; it is not the same quantity as temperature. A thermometer works by using a property that changes predictably with temperature, such as the volume of a liquid or electrical resistance."
+      },
+      {
+        "heading": "Scales and safe readings",
+        "body": "The Celsius scale is commonly used in everyday measurements. Temperature differences in degrees Celsius have the same size as differences in kelvins. For gas-law calculations, use absolute temperature in kelvins: temperature in K equals temperature in °C plus 273.15. Choose a thermometer with a suitable range and read it carefully."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Thermometric property",
+        "definition": "A measurable property that changes in a predictable way with temperature."
+      },
+      {
+        "term": "Kelvin",
+        "definition": "The SI unit of thermodynamic temperature."
+      },
+      {
+        "term": "Calibration",
+        "definition": "Marking or adjusting an instrument against known reference values."
+      }
+    ],
+    "questions": [
+      {
+        "id": "phy_thermometry_q1",
+        "prompt": "What is a thermometric property?",
+        "options": [
+          "A property that changes predictably with temperature",
+          "A unit of force",
+          "A way to measure mass only",
+          "A method for reducing pressure"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "A thermometer uses a measurable property that changes predictably with temperature."
+      },
+      {
+        "id": "phy_thermometry_q2",
+        "prompt": "What temperature is 27 °C in kelvins, approximately?",
+        "options": [
+          "246 K",
+          "273 K",
+          "300 K",
+          "327 K"
+        ],
+        "correctOptionIndex": 2,
+        "explanation": "Convert using K = °C + 273.15. Thus 27 °C is about 300 K."
+      }
+    ]
+  }
+}

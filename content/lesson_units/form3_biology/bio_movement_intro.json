@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_biology",
+  "form": 3,
+  "subject": "Biology",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "bio_movement",
+  "topicTitle": "Movement in and out of cells",
+  "topicDescription": "Diffusion, osmosis, and active transport.",
+  "lesson": {
+    "id": "bio_movement_intro",
+    "title": "How substances cross cell membranes",
+    "readTimeMinutes": 6,
+    "sections": [
+      {
+        "heading": "Diffusion",
+        "body": "Diffusion is the net movement of particles from a region of higher concentration to a region of lower concentration, due to their random motion. It does not require the cell to use energy. Oxygen can diffuse into cells when its concentration is higher outside than inside."
+      },
+      {
+        "heading": "Osmosis and active transport",
+        "body": "Osmosis is the net movement of water molecules through a selectively permeable membrane from a more dilute solution to a more concentrated solution. Active transport moves substances against a concentration gradient and requires energy from respiration. Root cells can use active transport to absorb some mineral ions from the soil."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Concentration gradient",
+        "definition": "A difference in the concentration of a substance between two places."
+      },
+      {
+        "term": "Osmosis",
+        "definition": "Net movement of water through a selectively permeable membrane from a dilute solution to a more concentrated solution."
+      },
+      {
+        "term": "Active transport",
+        "definition": "Movement of substances against a concentration gradient using energy."
+      }
+    ],
+    "questions": [
+      {
+        "id": "bio_movement_q1",
+        "prompt": "In which direction is the net movement of particles during diffusion?",
+        "options": [
+          "From lower to higher concentration only",
+          "From higher to lower concentration",
+          "Only through a cell wall",
+          "Only when energy is supplied"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Diffusion produces a net movement down the concentration gradient, from higher concentration to lower concentration."
+      },
+      {
+        "id": "bio_movement_q2",
+        "prompt": "Which statement best describes osmosis?",
+        "options": [
+          "Movement of any particle using energy",
+          "Movement of water through a selectively permeable membrane",
+          "Movement of water through a cell wall only",
+          "Breakdown of glucose in a cell"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Osmosis specifically concerns the net movement of water molecules through a selectively permeable membrane."
+      }
+    ]
+  }
+}

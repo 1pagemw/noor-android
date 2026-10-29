@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_biology",
+  "form": 3,
+  "subject": "Biology",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "bio_transport",
+  "topicTitle": "Transport in plants",
+  "topicDescription": "Water movement, transpiration, and sugar transport.",
+  "lesson": {
+    "id": "bio_transport_intro",
+    "title": "Moving water and sugars",
+    "readTimeMinutes": 6,
+    "sections": [
+      {
+        "heading": "Water and transpiration",
+        "body": "Water absorbed by roots travels through xylem to stems and leaves. Evaporation of water from leaf surfaces followed by diffusion of water vapour out through stomata is called transpiration. This water loss helps maintain an upward flow of water through the xylem. Wind, temperature, humidity, and light can affect the rate."
+      },
+      {
+        "heading": "Transporting sugars",
+        "body": "Phloem transports dissolved sugars, especially sucrose, from sources such as photosynthesising leaves to sinks such as growing tissues and storage organs. Movement of dissolved products through phloem is called translocation. Unlike the xylem's main upward flow, phloem transport can occur in different directions in different sieve tubes."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Transpiration",
+        "definition": "Loss of water vapour from a plant, mainly through leaf stomata."
+      },
+      {
+        "term": "Translocation",
+        "definition": "Movement of dissolved organic substances through the phloem."
+      },
+      {
+        "term": "Source and sink",
+        "definition": "A source supplies a substance; a sink uses or stores it."
+      }
+    ],
+    "questions": [
+      {
+        "id": "bio_transport_q1",
+        "prompt": "Which tissue mainly carries water from roots to leaves?",
+        "options": [
+          "Phloem",
+          "Xylem",
+          "Cortex only",
+          "Guard cells"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Water and mineral ions move through xylem tissue from roots towards stems and leaves."
+      },
+      {
+        "id": "bio_transport_q2",
+        "prompt": "What is translocation in plants?",
+        "options": [
+          "Loss of water vapour from leaves",
+          "Movement of dissolved sugars through phloem",
+          "Absorption of light by chlorophyll",
+          "Movement of water through the soil"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Phloem translocates dissolved sugars from sources to parts of the plant that use or store them."
+      }
+    ]
+  }
+}

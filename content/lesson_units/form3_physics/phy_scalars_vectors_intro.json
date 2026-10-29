@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "phy_scalars_vectors",
+  "topicTitle": "Scalar and vector quantities",
+  "topicDescription": "Distinguishing quantities with magnitude only from those with direction.",
+  "lesson": {
+    "id": "phy_scalars_vectors_intro",
+    "title": "Magnitude and direction",
+    "readTimeMinutes": 5,
+    "sections": [
+      {
+        "heading": "Scalars",
+        "body": "A scalar quantity has magnitude (size) only. Examples include distance, speed, mass, time, and temperature. A scalar can be described with a number and unit, such as a journey of 4 km or a time of 20 s."
+      },
+      {
+        "heading": "Vectors",
+        "body": "A vector quantity has both magnitude and direction. Examples include displacement, velocity, acceleration, force, and weight. Distance measures the path travelled, while displacement is the straight-line change in position in a stated direction. When vectors act along one line, choose a positive direction and combine them with signs."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Scalar",
+        "definition": "A quantity described by magnitude only."
+      },
+      {
+        "term": "Vector",
+        "definition": "A quantity described by magnitude and direction."
+      },
+      {
+        "term": "Displacement",
+        "definition": "Change in position in a specified direction."
+      }
+    ],
+    "questions": [
+      {
+        "id": "phy_scalars_vectors_q1",
+        "prompt": "Which quantity is a vector?",
+        "options": [
+          "Mass",
+          "Time",
+          "Velocity",
+          "Temperature"
+        ],
+        "correctOptionIndex": 2,
+        "explanation": "Velocity has magnitude and direction, so it is a vector."
+      },
+      {
+        "id": "phy_scalars_vectors_q2",
+        "prompt": "What extra information does a vector include compared with a scalar?",
+        "options": [
+          "Direction",
+          "A second unit",
+          "A larger number",
+          "A graph"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "A vector is described by both magnitude and direction; a scalar has magnitude only."
+      }
+    ]
+  }
+}
