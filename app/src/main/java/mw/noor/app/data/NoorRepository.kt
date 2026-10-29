@@ -100,7 +100,7 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.2")
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.3")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
@@ -197,7 +197,7 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.2")
+                    setRequestProperty("User-Agent", "Noor-Android/0.4.3")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection

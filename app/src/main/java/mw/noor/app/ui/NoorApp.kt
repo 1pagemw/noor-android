@@ -342,7 +342,7 @@ private fun WelcomeScreen(onContinue: () -> Unit) {
             color = NoorColors.MossDark,
         )
         Text(
-            "Quality study notes and practice for Form 3 students in Malawi.",
+            "Lessons and practice for Form 3 students in Malawi.",
             style = MaterialTheme.typography.bodyLarge,
             color = NoorColors.Ink,
             modifier = Modifier.fillMaxWidth(0.9f),
@@ -353,7 +353,6 @@ private fun WelcomeScreen(onContinue: () -> Unit) {
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxWidth().heightIn(max = 270.dp),
         )
-        DraftStatusBadge()
         PrimaryButton(text = "Get started", onClick = onContinue, minHeight = 52.dp)
     }
 }
@@ -490,6 +489,19 @@ private fun TodayScreen(
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search lessons, topics…") },
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = NoorColors.MossDark) },
+            trailingIcon = if (searchQuery.isNotEmpty()) {
+                {
+                    IconButton(
+                        onClick = {
+                            searchQuery = ""
+                            showAllSearchResults = false
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Clear search" },
+                    ) {
+                        Icon(Icons.Outlined.Close, contentDescription = null, tint = NoorColors.MossDark)
+                    }
+                }
+            } else null,
             singleLine = true,
             shape = RoundedCornerShape(24.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -658,14 +670,14 @@ private fun LessonPathCard(number: Int, target: HomeLessonTarget, completed: Boo
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(target.topic.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(target.lesson.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "${target.entry.subject} · ${countLabel(target.lesson.readTimeMinutes, "minute")} · ${if (target.lesson.isOfflineAvailable) "Offline" else "Online"}",
+                    "${target.entry.subject} · ${target.topic.title} · ${countLabel(target.lesson.readTimeMinutes, "minute")} · ${lessonAvailabilityLabel(target.lesson.isOfflineAvailable)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NoorColors.Ink.copy(alpha = 0.68f),
                 )
             }
-            Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${target.topic.title}", tint = NoorColors.Moss)
+            Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${target.lesson.title}", tint = NoorColors.Moss)
         }
     }
 }
@@ -709,13 +721,6 @@ private fun LearnScreen(
             body = "Saved lessons and their questions work offline.",
             icon = Icons.Outlined.Download,
         )
-        if (entries.any { it.curriculumStatus.contains("draft", ignoreCase = true) }) {
-            InfoCard(
-                title = "Draft content",
-                body = "Lessons are awaiting local teacher review.",
-                icon = Icons.Outlined.Info,
-            )
-        }
         Text("Your subjects", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         entries.forEach { entry ->
             val pack = downloadedPacks.firstOrNull { it.id == entry.id }
@@ -786,7 +791,6 @@ private fun SubjectScreen(
     val savedCount = lessons.count { it.id in savedLessonIds }
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader(title = entry.subject, subtitle = "Form ${entry.form}", onBack = onBack)
-        StatusBadge(entry.curriculumStatus)
         Text("$savedCount of ${countLabel(lessons.size, "lesson")} saved offline", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
         pack.topics.forEach { topic ->
             val topicProgress = repository.topicProgress(topic.id)
@@ -909,15 +913,6 @@ internal fun LessonScreen(
             Text(countLabel(lesson.readTimeMinutes, "minute"), style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
             Text("Form ${pack.form}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
         }
-        Surface(color = NoorColors.Mint, shape = RoundedCornerShape(16.dp)) {
-            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(Icons.Outlined.Info, contentDescription = null, tint = NoorColors.MossDark)
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Draft content", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = NoorColors.MossDark)
-                    Text(pack.curriculumStatus, style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
-                }
-            }
-        }
         lesson.sections.forEach { section ->
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(section.heading, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = NoorColors.MossDark)
@@ -987,7 +982,7 @@ private fun ReportIssueScreen(
 
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Report content issue", lesson.title, onBack)
-        Text("What should be reviewed?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text("What needs attention?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         issueTypes.forEach { issueType ->
             val isSelected = selectedIssue == issueType
             Card(
@@ -1049,17 +1044,22 @@ private fun ReviewScreen(
             Text("No lessons are available yet.", style = MaterialTheme.typography.titleMedium, color = NoorColors.MossDark)
         } else {
             if (savedLessonIds.isEmpty() && dueTopics.isEmpty()) {
-                Text("Open a lesson to save its practice for offline review.", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
-            }
-            Text("Due today · ${countLabel(dueTopics.size, "topic")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            if (dueTopics.isEmpty()) {
-                Text("Nothing due", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
+                InfoCard(
+                    title = "Your review list is empty",
+                    body = "Open a lesson from Learn to save its practice for offline review.",
+                    icon = Icons.Outlined.MenuBook,
+                )
             } else {
-                dueTopics.forEach { (entry, topic) -> DueReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
-            }
-            if (otherTopics.isNotEmpty()) {
-                Text("Other saved topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                otherTopics.forEach { (entry, topic) -> SavedTopicRow(entry, topic, onStartReview) }
+                Text("Due today · ${countLabel(dueTopics.size, "topic")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                if (dueTopics.isEmpty()) {
+                    Text("Nothing due today", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
+                } else {
+                    dueTopics.forEach { (entry, topic) -> DueReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
+                }
+                if (otherTopics.isNotEmpty()) {
+                    Text("Other saved topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    otherTopics.forEach { (entry, topic) -> SavedTopicRow(entry, topic, onStartReview) }
+                }
             }
         }
     }
@@ -1139,10 +1139,13 @@ private fun SettingsScreen(
 ) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     var deletionFailureTitle by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
     val summary = repository.progressSummary(lessonIndex)
     val savedLessonIds = repository.savedLessonIds()
     val savedLessons = lessonIndex.lessons.filter { it.lessonId in savedLessonIds }
     val accuracy = if (summary.answeredQuestions == 0) "—" else "${summary.correctAnswers * 100 / summary.answeredQuestions}%"
+    val accuracyLabel = if (summary.answeredQuestions == 0) "No practice yet" else "practice accuracy"
+    val pendingDeletion = savedLessons.firstOrNull { it.lessonId == pendingDeletionId }
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader("Profile", "", onBack)
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, NoorColors.Mint)) {
@@ -1161,7 +1164,7 @@ private fun SettingsScreen(
         Text("Learning stats", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard("${summary.completedLessons}/${summary.totalLessons}", "lessons complete", Modifier.weight(1f))
-            MetricCard(accuracy, "practice accuracy", Modifier.weight(1f))
+            MetricCard(accuracy, accuracyLabel, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard(summary.quizzesCompleted.toString(), if (summary.quizzesCompleted == 1) "practice session" else "practice sessions", Modifier.weight(1f))
@@ -1216,11 +1219,7 @@ private fun SettingsScreen(
                         Text(lesson.title, fontWeight = FontWeight.SemiBold)
                         Text("${lesson.subject} · ${lesson.topicTitle} · ${formatBytes(repository.lessonSize(lesson))}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
                     }
-                    IconButton(onClick = {
-                        val deleted = repository.deleteLesson(lesson)
-                        deletionFailureTitle = if (deleted) null else lesson.title
-                        if (deleted) onDataChanged()
-                    }) {
+                    IconButton(onClick = { pendingDeletionId = lesson.lessonId }) {
                         Icon(Icons.Outlined.DeleteOutline, contentDescription = "Remove ${lesson.title} offline lesson", tint = NoorColors.Moss)
                     }
                 }
@@ -1238,11 +1237,27 @@ private fun SettingsScreen(
         ) { Text("Clear learning progress") }
         Text("Noor ${BuildConfig.VERSION_NAME} · build ${BuildConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.62f))
     }
+    pendingDeletion?.let { lesson ->
+        AlertDialog(
+            onDismissRequest = { pendingDeletionId = null },
+            title = { Text("Remove saved lesson?") },
+            text = { Text("${lesson.title} will be removed from this phone. Your learning progress will stay.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val deleted = repository.deleteLesson(lesson)
+                    deletionFailureTitle = if (deleted) null else lesson.title
+                    pendingDeletionId = null
+                    if (deleted) onDataChanged()
+                }) { Text("Remove lesson") }
+            },
+            dismissButton = { TextButton(onClick = { pendingDeletionId = null }) { Text("Keep lesson") } },
+        )
+    }
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             title = { Text("Clear learning progress?") },
-            text = { Text("Progress, the study streak, and your Continue Learning position will be deleted. Saved lessons will stay.") },
+            text = { Text("This cannot be undone. Your lesson and practice progress, study streak, and Continue Learning position will be deleted. Saved lessons will stay.") },
             confirmButton = {
                 TextButton(onClick = {
                     repository.clearProgress()
@@ -1296,7 +1311,7 @@ internal fun QuizScreen(
                     else -> "Review recommended"
                 },
             )
-            PrimaryButton(text = "Finish review", onClick = { onFinished(correctCount, questions.size) })
+            PrimaryButton(text = "Finish practice", onClick = { onFinished(correctCount, questions.size) })
         }
         return
     }
@@ -1467,11 +1482,6 @@ private fun InfoCard(title: String, body: String, icon: ImageVector) {
             }
         }
     }
-}
-
-@Composable
-private fun DraftStatusBadge() {
-    StatusBadge("Draft · teacher review")
 }
 
 @Composable
