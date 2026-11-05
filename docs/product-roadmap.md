@@ -10,7 +10,7 @@ Noor should help secondary-school students in Malawi learn and revise curriculum
 4. Review topics that need another try.
 5. See progress and choose a useful next step.
 
-The `feature/android-scaffold` branch advances the Form 3 Biology and Physics pilot to v0.4.3. In addition to the offline learning loop and local progress, it uses three primary tabs, shows four summary metrics in Profile, distinguishes due-review cards from other saved topics, shades topic cards by lesson completion, adds an on-device study streak, and replaces whole-subject downloads with lesson-level units. The starter subjects contain six Biology topics and seven Physics topics, each with one short lesson and two questions.
+The `feature/android-scaffold` branch advances the Form 3 Biology and Physics pilot to v0.4.4. In addition to the offline learning loop and local progress, it uses three primary tabs, shows four summary metrics in Profile, distinguishes due-review cards from other saved topics, shades topic cards by lesson completion, adds an on-device study streak, and replaces whole-subject downloads with lesson-level units. Responsive layouts switch from a bottom bar to a navigation rail at 600dp, cap reading and form widths, and use two-column grids where card widths allow. The starter subjects contain six Biology topics and seven Physics topics, each with one short lesson and two questions.
 
 **Current status:** the code and draft packs are not yet an approved classroom pilot. Topic scope is provisional, the current official syllabus documents have not been verified, and no Malawi teacher has reviewed the lessons. CI and manual Android/offline device checks must pass before calling the alpha exit gate complete. See [`content scope and sources`](content/form3-scope.md) and [`versioning policy`](versioning.md).
 
@@ -30,7 +30,7 @@ Prepare the content model and local storage so a lesson pack can be updated with
 
 ### App versioning foundation
 
-The current development build advances the scaffold to `versionName = 0.4.3` and `versionCode = 7`. Keep `versionName` semantic and human-readable (`0.x.y` during pilot development; `1.0.0` for the first stable public release). Increase Android `versionCode` monotonically for every distributable build so a newer test build can update an older one. Tag release source with matching Git tags such as `v0.1.0` and `v1.0.0`.
+The current development build advances the scaffold to `versionName = 0.4.4` and `versionCode = 8`. Keep `versionName` semantic and human-readable (`0.x.y` during pilot development; `1.0.0` for the first stable public release). Increase Android `versionCode` monotonically for every distributable build so a newer test build can update an older one. Tag release source with matching Git tags such as `v0.1.0` and `v1.0.0`.
 
 The Actions workflow is for CI and debug APK artifacts. Repository builds use a stable development-only signing key from GitHub Secrets when available so newer development APKs can update earlier ones; this is not a production release key. Before distributing builds beyond the development team, add a separate release workflow that builds a signed APK/AAB from a version tag, creates release notes, and keeps debug and release builds clearly separate.
 

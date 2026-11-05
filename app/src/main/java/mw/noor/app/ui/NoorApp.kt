@@ -6,10 +6,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -52,6 +55,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -118,6 +124,19 @@ private enum class NoorTab(val title: String, val icon: ImageVector) {
     TODAY("Today", Icons.Outlined.Home),
     LEARN("Learn", Icons.Outlined.MenuBook),
     REVIEW("Review", Icons.Outlined.Refresh),
+}
+
+internal fun shouldUseNavigationRail(availableWidthDp: Float): Boolean = availableWidthDp >= 600f
+
+internal fun responsiveGridColumnCount(
+    availableWidthDp: Float,
+    minimumCellWidthDp: Float = 340f,
+    spacingDp: Float = 12f,
+    maxColumns: Int = 2,
+): Int {
+    if (!availableWidthDp.isFinite() || !minimumCellWidthDp.isFinite() || minimumCellWidthDp <= 0f || maxColumns <= 1) return 1
+    val columns = ((availableWidthDp + spacingDp) / (minimumCellWidthDp + spacingDp)).toInt()
+    return columns.coerceIn(1, maxColumns)
 }
 
 private data class HomeLessonTarget(
@@ -329,31 +348,40 @@ fun NoorApp() {
 
 @Composable
 private fun WelcomeScreen(onContinue: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("noor", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
-        Text(
-            "Small steps.\nBig knowledge.",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            color = NoorColors.MossDark,
-        )
-        Text(
-            "Lessons and practice for Form 3 students in Malawi.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = NoorColors.Ink,
-            modifier = Modifier.fillMaxWidth(0.9f),
-        )
-        Image(
-            painter = painterResource(R.drawable.onboarding_student),
-            contentDescription = "A student writing in an exercise book",
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxWidth().heightIn(max = 270.dp),
-        )
-        PrimaryButton(text = "Get started", onClick = onContinue, minHeight = 52.dp)
+    BoxWithConstraints(Modifier.fillMaxSize().background(NoorColors.Canvas)) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 720.dp)
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .align(Alignment.TopCenter)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("noor", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
+            Text(
+                "Small steps.\nBig knowledge.",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = NoorColors.MossDark,
+            )
+            Text(
+                "Lessons and practice for Form 3 students in Malawi.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = NoorColors.Ink,
+                modifier = Modifier.fillMaxWidth(0.9f),
+            )
+            Image(
+                painter = painterResource(R.drawable.onboarding_student),
+                contentDescription = "A student writing in an exercise book",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 270.dp),
+            )
+            PrimaryButton(text = "Get started", onClick = onContinue, minHeight = 52.dp)
+        }
     }
 }
 
@@ -372,61 +400,97 @@ private fun LearningTabs(
     onContinueLesson: (mw.noor.app.data.LastLesson) -> Unit,
 ) {
     val selected = NoorTab.entries.firstOrNull { it.name == selectedTabName } ?: NoorTab.TODAY
-    Scaffold(
-        containerColor = NoorColors.Canvas,
-        contentWindowInsets = WindowInsets.safeDrawing,
-        bottomBar = {
-            NavigationBar(modifier = Modifier.heightIn(min = 80.dp), containerColor = Color.White) {
-                NoorTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = selected == tab,
-                        onClick = { onSelectTab(tab.name) },
-                        icon = { Icon(tab.icon, contentDescription = null) },
-                        label = {
-                            Text(
-                                tab.title,
-                                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val useNavigationRail = shouldUseNavigationRail(maxWidth.value)
+        Scaffold(
+            containerColor = NoorColors.Canvas,
+            contentWindowInsets = WindowInsets.safeDrawing,
+            bottomBar = {
+                if (!useNavigationRail) {
+                    NavigationBar(modifier = Modifier.heightIn(min = 80.dp), containerColor = Color.White) {
+                        NoorTab.entries.forEach { tab ->
+                            NavigationBarItem(
+                                selected = selected == tab,
+                                onClick = { onSelectTab(tab.name) },
+                                icon = { Icon(tab.icon, contentDescription = null) },
+                                label = {
+                                    Text(
+                                        tab.title,
+                                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = NoorColors.Moss,
+                                    selectedTextColor = NoorColors.Moss,
+                                    unselectedIconColor = NoorColors.MossDark,
+                                    unselectedTextColor = NoorColors.MossDark,
+                                    indicatorColor = NoorColors.Mint,
+                                ),
                             )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = NoorColors.Moss,
-                            selectedTextColor = NoorColors.Moss,
-                            unselectedIconColor = NoorColors.MossDark,
-                            unselectedTextColor = NoorColors.MossDark,
-                            indicatorColor = NoorColors.Mint,
-                        ),
+                        }
+                    }
+                }
+            },
+        ) { padding ->
+            Row(Modifier.fillMaxSize().padding(padding)) {
+                if (useNavigationRail) {
+                    NavigationRail(
+                        modifier = Modifier.fillMaxHeight(),
+                        containerColor = Color.White,
+                    ) {
+                        NoorTab.entries.forEach { tab ->
+                            NavigationRailItem(
+                                selected = selected == tab,
+                                onClick = { onSelectTab(tab.name) },
+                                icon = { Icon(tab.icon, contentDescription = null) },
+                                label = {
+                                    Text(
+                                        tab.title,
+                                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+                                    )
+                                },
+                                alwaysShowLabel = true,
+                                colors = NavigationRailItemDefaults.colors(
+                                    selectedIconColor = NoorColors.Moss,
+                                    selectedTextColor = NoorColors.Moss,
+                                    unselectedIconColor = NoorColors.MossDark,
+                                    unselectedTextColor = NoorColors.MossDark,
+                                    indicatorColor = NoorColors.Mint,
+                                ),
+                            )
+                        }
+                    }
+                }
+                val pageModifier = Modifier.weight(1f).fillMaxHeight()
+                when (selected) {
+                    NoorTab.TODAY -> TodayScreen(
+                        modifier = pageModifier,
+                        entries = entries,
+                        downloadedPacks = downloadedPacks,
+                        repository = repository,
+                        dataVersion = dataVersion,
+                        onOpenSettings = onOpenSettings,
+                        onSelectTab = onSelectTab,
+                        onContinueLesson = onContinueLesson,
+                    )
+                    NoorTab.LEARN -> LearnScreen(
+                        modifier = pageModifier,
+                        entries = entries,
+                        downloadedPacks = downloadedPacks,
+                        repository = repository,
+                        onOpenPack = onOpenPack,
+                        onOpenSettings = onOpenSettings,
+                    )
+                    NoorTab.REVIEW -> ReviewScreen(
+                        modifier = pageModifier,
+                        entries = entries,
+                        downloadedPacks = downloadedPacks,
+                        lessonIndex = lessonIndex,
+                        repository = repository,
+                        onStartReview = onStartReview,
                     )
                 }
             }
-        },
-    ) { padding ->
-        when (selected) {
-            NoorTab.TODAY -> TodayScreen(
-                modifier = Modifier.padding(padding),
-                entries = entries,
-                downloadedPacks = downloadedPacks,
-                repository = repository,
-                dataVersion = dataVersion,
-                onOpenSettings = onOpenSettings,
-                onSelectTab = onSelectTab,
-                onContinueLesson = onContinueLesson,
-            )
-            NoorTab.LEARN -> LearnScreen(
-                modifier = Modifier.padding(padding),
-                entries = entries,
-                downloadedPacks = downloadedPacks,
-                repository = repository,
-                onOpenPack = onOpenPack,
-                onOpenSettings = onOpenSettings,
-            )
-            NoorTab.REVIEW -> ReviewScreen(
-                modifier = Modifier.padding(padding),
-                entries = entries,
-                downloadedPacks = downloadedPacks,
-                lessonIndex = lessonIndex,
-                repository = repository,
-                onStartReview = onStartReview,
-            )
         }
     }
 }
@@ -456,19 +520,22 @@ private fun TodayScreen(
         listOf(target.entry.subject, target.topic.title, target.lesson.title).any { it.lowercase(Locale.ROOT).contains(query) }
     }
     val searchResults = visibleSearchResults(matchingSearchResults, showAllSearchResults)
+    val completedLessons = remember(dataVersion) { repository.completedLessonIds() }
     val lastLesson = repository.lastLesson()
-    val continueTarget = lastLesson?.let { last ->
+    val lastOpenedTarget = lastLesson?.let { last ->
         lessonTargets.firstOrNull {
             it.entry.id == last.packId && it.topic.id == last.topicId && it.lesson.id == last.lessonId
         }
     }
+    val continueTarget = lastOpenedTarget?.takeUnless { it.lesson.id in completedLessons }
+        ?: lessonTargets.firstOrNull { it.lesson.id !in completedLessons }
     val startTarget = continueTarget ?: lessonTargets.firstOrNull()
+    val shouldLabelAsContinue = lastOpenedTarget != null || completedLessons.isNotEmpty()
     val pathTargets = startTarget?.let { anchor ->
         val subjectLessons = lessonTargets.filter { it.entry.id == anchor.entry.id }
-        val startAt = if (continueTarget == null) 0 else subjectLessons.indexOfFirst { it.lesson.id == anchor.lesson.id }.coerceAtLeast(0)
-        subjectLessons.drop(startAt).take(3)
+        val startAt = subjectLessons.indexOfFirst { it.lesson.id == anchor.lesson.id }.coerceAtLeast(0)
+        subjectLessons.drop(startAt + 1).filter { it.lesson.id !in completedLessons }.take(3)
     }.orEmpty()
-    val completedLessons = remember(dataVersion) { repository.completedLessonIds() }
     val streak = repository.studyStreak()
 
     ScreenColumn(modifier, contentSpacing = 12.dp) {
@@ -517,7 +584,7 @@ private fun TodayScreen(
             if (searchResults.isEmpty()) {
                 Text("No lessons match.", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
             } else {
-                searchResults.forEach { target ->
+                ResponsiveGrid(searchResults, minimumCellWidth = 340.dp) { target ->
                     LessonTargetCard(target, completed = target.lesson.id in completedLessons) {
                         onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id))
                     }
@@ -532,39 +599,14 @@ private fun TodayScreen(
                 }
             }
         } else {
-            startTarget?.let { target ->
-                val completedInTopic = target.topic.lessons.count { it.id in completedLessons }
-                ContinueLearningCard(
-                    target = target,
-                    isContinue = continueTarget != null,
-                    completedLessons = completedInTopic,
-                    totalLessons = target.topic.lessons.size,
-                    onClick = { onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id)) },
-                )
-            } ?: StartLearningCard { onSelectTab(NoorTab.LEARN.name) }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Today's path", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = { onSelectTab(NoorTab.LEARN.name) }, modifier = Modifier.heightIn(min = 44.dp)) {
-                    Text("See all")
-                }
-            }
-            if (pathTargets.isEmpty()) {
-                InfoCard(
-                    title = "Choose a lesson to begin",
-                    body = "Lessons save individually as you open them.",
-                    icon = Icons.Outlined.Download,
-                )
-            } else {
-                pathTargets.forEachIndexed { index, target ->
-                    LessonPathCard(
-                        number = index + 1,
-                        target = target,
-                        completed = target.lesson.id in completedLessons,
-                    ) {
-                        onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id))
-                    }
-                }
-            }
+            TodayStudyOverview(
+                startTarget = startTarget,
+                isContinue = shouldLabelAsContinue,
+                completedLessons = completedLessons,
+                pathTargets = pathTargets,
+                onBrowse = { onSelectTab(NoorTab.LEARN.name) },
+                onOpenLesson = { target -> onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id)) },
+            )
         }
     }
     if (showStreakInfo) {
@@ -579,6 +621,83 @@ private fun TodayScreen(
             text = { Text(streakMessage) },
             confirmButton = { TextButton(onClick = { showStreakInfo = false }) { Text("Got it") } },
         )
+    }
+}
+
+@Composable
+private fun TodayStudyOverview(
+    startTarget: HomeLessonTarget?,
+    isContinue: Boolean,
+    completedLessons: Set<String>,
+    pathTargets: List<HomeLessonTarget>,
+    onBrowse: () -> Unit,
+    onOpenLesson: (HomeLessonTarget) -> Unit,
+) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if (maxWidth >= 900.dp) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Top) {
+                Box(Modifier.weight(1.1f)) {
+                    TodayHero(startTarget, isContinue, completedLessons, onBrowse, onOpenLesson)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TodayPathSection(pathTargets, completedLessons, onBrowse, onOpenLesson)
+                }
+            }
+        } else {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TodayHero(startTarget, isContinue, completedLessons, onBrowse, onOpenLesson)
+                TodayPathSection(pathTargets, completedLessons, onBrowse, onOpenLesson)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayHero(
+    target: HomeLessonTarget?,
+    isContinue: Boolean,
+    completedLessons: Set<String>,
+    onBrowse: () -> Unit,
+    onOpenLesson: (HomeLessonTarget) -> Unit,
+) {
+    if (target == null) {
+        StartLearningCard(onBrowse)
+    } else {
+        ContinueLearningCard(
+            target = target,
+            isContinue = isContinue,
+            completedLessons = target.topic.lessons.count { it.id in completedLessons },
+            totalLessons = target.topic.lessons.size,
+            onClick = { onOpenLesson(target) },
+        )
+    }
+}
+
+@Composable
+private fun TodayPathSection(
+    pathTargets: List<HomeLessonTarget>,
+    completedLessons: Set<String>,
+    onBrowse: () -> Unit,
+    onOpenLesson: (HomeLessonTarget) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text("Today's path", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        TextButton(onClick = onBrowse, modifier = Modifier.heightIn(min = 44.dp)) { Text("See all") }
+    }
+    if (pathTargets.isEmpty()) {
+        InfoCard(
+            title = "More lessons to explore",
+            body = "Browse another topic in Learn.",
+            icon = Icons.Outlined.MenuBook,
+        )
+    } else {
+        pathTargets.forEachIndexed { index, target ->
+            LessonPathCard(
+                number = index + 1,
+                target = target,
+                completed = target.lesson.id in completedLessons,
+            ) { onOpenLesson(target) }
+        }
     }
 }
 
@@ -722,9 +841,11 @@ private fun LearnScreen(
             icon = Icons.Outlined.Download,
         )
         Text("Your subjects", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-        entries.forEach { entry ->
-            val pack = downloadedPacks.firstOrNull { it.id == entry.id }
-            if (pack != null) PackCard(entry, pack, onClick = { onOpenPack(entry) })
+        val availablePacks = entries.mapNotNull { entry ->
+            downloadedPacks.firstOrNull { it.id == entry.id }?.let { pack -> entry to pack }
+        }
+        ResponsiveGrid(availablePacks, minimumCellWidth = 340.dp) { (entry, pack) ->
+            PackCard(entry, pack, onClick = { onOpenPack(entry) })
         }
     }
 }
@@ -792,7 +913,7 @@ private fun SubjectScreen(
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
         BackHeader(title = entry.subject, subtitle = "Form ${entry.form}", onBack = onBack)
         Text("$savedCount of ${countLabel(lessons.size, "lesson")} saved offline", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
-        pack.topics.forEach { topic ->
+        ResponsiveGrid(pack.topics, minimumCellWidth = 360.dp) { topic ->
             val topicProgress = repository.topicProgress(topic.id)
             TopicCard(
                 topic = topic,
@@ -900,7 +1021,7 @@ internal fun LessonScreen(
     }
     val lessonPosition = (topic.lessons.indexOfFirst { it.id == lesson.id } + 1).coerceAtLeast(0)
     val lessonTotal = topic.lessons.size.coerceAtLeast(1)
-    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 680.dp) {
         BackHeader(title = pack.subject, subtitle = "${topic.title} · Lesson $lessonPosition of $lessonTotal", onBack = onBack)
         LinearProgressIndicator(
             progress = { (lessonPosition.toFloat() / lessonTotal).coerceIn(0f, 1f) },
@@ -980,7 +1101,7 @@ private fun ReportIssueScreen(
     var selectedIssue by rememberSaveable(lesson.id) { mutableStateOf("") }
     var details by rememberSaveable(lesson.id) { mutableStateOf("") }
 
-    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 680.dp) {
         BackHeader("Report content issue", lesson.title, onBack)
         Text("What needs attention?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         issueTypes.forEach { issueType ->
@@ -1054,11 +1175,15 @@ private fun ReviewScreen(
                 if (dueTopics.isEmpty()) {
                     Text("Nothing due today", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
                 } else {
-                    dueTopics.forEach { (entry, topic) -> DueReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview) }
+                    ResponsiveGrid(dueTopics, minimumCellWidth = 390.dp) { (entry, topic) ->
+                        DueReviewCard(entry, topic, repository.topicProgress(topic.id), onStartReview)
+                    }
                 }
                 if (otherTopics.isNotEmpty()) {
                     Text("Other saved topics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    otherTopics.forEach { (entry, topic) -> SavedTopicRow(entry, topic, onStartReview) }
+                    ResponsiveGrid(otherTopics, minimumCellWidth = 390.dp) { (entry, topic) ->
+                        SavedTopicRow(entry, topic, onStartReview)
+                    }
                 }
             }
         }
@@ -1146,7 +1271,7 @@ private fun SettingsScreen(
     val accuracy = if (summary.answeredQuestions == 0) "—" else "${summary.correctAnswers * 100 / summary.answeredQuestions}%"
     val accuracyLabel = if (summary.answeredQuestions == 0) "No practice yet" else "practice accuracy"
     val pendingDeletion = savedLessons.firstOrNull { it.lessonId == pendingDeletionId }
-    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 1000.dp) {
         BackHeader("Profile", "", onBack)
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, NoorColors.Mint)) {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1294,7 +1419,7 @@ internal fun QuizScreen(
         return
     }
     if (showResult) {
-        ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+        ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 680.dp) {
             BackHeader("Practice complete", topic.title, onBack)
             Text("${correctCount * 100 / questions.size}%", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
             Text("$correctCount of ${questions.size} correct", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -1317,7 +1442,7 @@ internal fun QuizScreen(
     }
 
     val question = questions[questionIndex]
-    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 680.dp) {
         BackHeader("Quick Check", "${pack.subject} · ${topic.title}", onBack)
         if (cachedLessonCount < totalLessonCount) {
             Text("Questions from ${countLabel(cachedLessonCount, "saved lesson")} of ${countLabel(totalLessonCount, "lesson")}.", style = MaterialTheme.typography.bodySmall, color = NoorColors.MossDark)
@@ -1394,7 +1519,7 @@ internal fun QuizScreen(
 
 @Composable
 internal fun MissingContentScreen(onBack: () -> Unit) {
-    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true) {
+    ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 680.dp) {
         BackHeader("Content unavailable", "", onBack)
         StatusBadge("Lesson not saved")
         PrimaryButton("Back to Noor", onBack)
@@ -1406,13 +1531,47 @@ internal fun ScreenColumn(
     modifier: Modifier = Modifier,
     safeDrawingInsets: Boolean = false,
     contentSpacing: Dp = 12.dp,
+    maxContentWidth: Dp = 1200.dp,
     content: @Composable () -> Unit,
 ) {
     val insets = if (safeDrawingInsets) Modifier.windowInsetsPadding(WindowInsets.safeDrawing) else Modifier
-    Column(
-        modifier = modifier.fillMaxSize().then(insets).background(NoorColors.Canvas).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(contentSpacing),
-    ) { content() }
+    BoxWithConstraints(modifier.fillMaxSize().background(NoorColors.Canvas)) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = maxContentWidth)
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .align(Alignment.TopCenter)
+                .then(insets)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(contentSpacing),
+        ) { content() }
+    }
+}
+
+@Composable
+private fun <T> ResponsiveGrid(
+    items: List<T>,
+    modifier: Modifier = Modifier,
+    minimumCellWidth: Dp = 340.dp,
+    spacing: Dp = 12.dp,
+    content: @Composable (T) -> Unit,
+) {
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val columns = responsiveGridColumnCount(maxWidth.value, minimumCellWidth.value, spacing.value)
+        val cellWidth = (maxWidth - spacing * (columns - 1)) / columns
+        Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+            items.chunked(columns).forEach { rowItems ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                    rowItems.forEach { item ->
+                        Box(Modifier.width(cellWidth)) { content(item) }
+                    }
+                    repeat(columns - rowItems.size) { Spacer(Modifier.width(cellWidth)) }
+                }
+            }
+        }
+    }
 }
 
 @Composable

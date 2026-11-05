@@ -10,6 +10,8 @@ import mw.noor.app.data.nextStudyStreak
 import androidx.work.WorkInfo
 import mw.noor.app.ui.lessonAvailabilityLabel
 import mw.noor.app.ui.shouldAutomaticallyStartDownload
+import mw.noor.app.ui.shouldUseNavigationRail
+import mw.noor.app.ui.responsiveGridColumnCount
 import mw.noor.app.ui.visibleSearchResults
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,6 +20,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RouteAndProgressTest {
+    @Test
+    fun navigationRailStartsAtCompactMediumWidthBreakpoint() {
+        assertFalse(shouldUseNavigationRail(599f))
+        assertTrue(shouldUseNavigationRail(600f))
+        assertTrue(shouldUseNavigationRail(840f))
+    }
+
+    @Test
+    fun responsiveGridAddsColumnsOnlyWhenMinimumCellsAndGapFit() {
+        assertEquals(1, responsiveGridColumnCount(691f, minimumCellWidthDp = 340f, spacingDp = 12f))
+        assertEquals(2, responsiveGridColumnCount(692f, minimumCellWidthDp = 340f, spacingDp = 12f))
+        assertEquals(2, responsiveGridColumnCount(1200f, minimumCellWidthDp = 340f, spacingDp = 12f))
+        assertEquals(1, responsiveGridColumnCount(900f, minimumCellWidthDp = 340f, spacingDp = 12f, maxColumns = 1))
+    }
+
     @Test
     fun automaticDownloadStartsOnlyWhenWorkIsMissingOrCancelled() {
         assertTrue(shouldAutomaticallyStartDownload(null))
