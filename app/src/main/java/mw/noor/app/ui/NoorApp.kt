@@ -66,6 +66,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +103,7 @@ import androidx.work.WorkInfo
 import android.content.Intent
 import mw.noor.app.BuildConfig
 import mw.noor.app.R
+import mw.noor.app.shuffledQuizQuestions
 import mw.noor.app.data.ContentCatalogEntry
 import mw.noor.app.data.ContentLesson
 import mw.noor.app.data.LastLesson
@@ -119,6 +121,7 @@ import mw.noor.app.ui.lessonCompletionFraction
 import mw.noor.app.ui.theme.NoorColors
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 private enum class NoorTab(val title: String, val icon: ImageVector) {
     TODAY("Today", Icons.Outlined.Home),
@@ -1269,7 +1272,7 @@ private fun SettingsScreen(
     val savedLessonIds = repository.savedLessonIds()
     val savedLessons = lessonIndex.lessons.filter { it.lessonId in savedLessonIds }
     val accuracy = if (summary.answeredQuestions == 0) "—" else "${summary.correctAnswers * 100 / summary.answeredQuestions}%"
-    val accuracyLabel = if (summary.answeredQuestions == 0) "No practice yet" else "practice accuracy"
+    val accuracyLabel = if (summary.answeredQuestions == 0) "No practice yet" else "practice accuracy · all time"
     val pendingDeletion = savedLessons.firstOrNull { it.lessonId == pendingDeletionId }
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 1000.dp) {
         BackHeader("Profile", "", onBack)
@@ -1324,6 +1327,7 @@ private fun SettingsScreen(
                 value = textScale,
                 onValueChange = onTextScaleChange,
                 valueRange = 0.9f..1.3f,
+                steps = 3,
                 colors = SliderDefaults.colors(
                     thumbColor = NoorColors.Moss,
                     activeTrackColor = NoorColors.Moss,
@@ -1358,8 +1362,12 @@ private fun SettingsScreen(
             onClick = { confirmClear = true },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Mint, contentColor = NoorColors.MossDark),
-        ) { Text("Clear learning progress") }
+            colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Mint, contentColor = NoorColors.Error),
+        ) {
+            Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = NoorColors.Error)
+            Spacer(Modifier.width(8.dp))
+            Text("Clear learning progress")
+        }
         Text("Noor ${BuildConfig.VERSION_NAME} · build ${BuildConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.62f))
     }
     pendingDeletion?.let { lesson ->
@@ -1384,11 +1392,14 @@ private fun SettingsScreen(
             title = { Text("Clear learning progress?") },
             text = { Text("This cannot be undone. Your lesson and practice progress, study streak, and Continue Learning position will be deleted. Saved lessons will stay.") },
             confirmButton = {
-                TextButton(onClick = {
-                    repository.clearProgress()
-                    confirmClear = false
-                    onDataChanged()
-                }) { Text("Clear progress") }
+                TextButton(
+                    onClick = {
+                        repository.clearProgress()
+                        confirmClear = false
+                        onDataChanged()
+                    },
+                    colors = TextButtonDefaults.textButtonColors(contentColor = NoorColors.Error),
+                ) { Text("Clear progress") }
             },
             dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
         )
@@ -1406,7 +1417,9 @@ internal fun QuizScreen(
     cachedLessonCount: Int,
     totalLessonCount: Int,
 ) {
-    val questions = topic.lessons.flatMap { it.questions }
+    val allQuestions = topic.lessons.flatMap { it.questions }
+    var quizSeed by rememberSaveable(topic.id) { mutableIntStateOf(Random.nextInt()) }
+    val questions = remember(quizSeed, topic.id) { shuffledQuizQuestions(allQuestions, quizSeed) }
     var questionIndex by rememberSaveable(topic.id) { mutableIntStateOf(0) }
     var selectedAnswer by rememberSaveable(topic.id) { mutableIntStateOf(-1) }
     var correctCount by rememberSaveable(topic.id) { mutableIntStateOf(0) }
@@ -1449,7 +1462,7 @@ internal fun QuizScreen(
         }
         Text("Question ${questionIndex + 1} of ${questions.size}", style = MaterialTheme.typography.bodyMedium, color = NoorColors.Ink.copy(alpha = 0.68f))
         LinearProgressIndicator(progress = (questionIndex + 1).toFloat() / questions.size, modifier = Modifier.fillMaxWidth(), color = NoorColors.Moss, trackColor = NoorColors.Mint)
-        Text(question.prompt, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Text(question.question.prompt, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         question.options.forEachIndexed { index, option ->
             val isSelected = index == selectedAnswer
             val isCorrectAnswer = answered && index == question.correctOptionIndex
@@ -1485,7 +1498,7 @@ internal fun QuizScreen(
             Box(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
                 InfoCard(
                     title = if (correct) "That's correct" else "Not quite",
-                    body = question.explanation,
+                    body = question.question.explanation,
                     icon = if (correct) Icons.Outlined.CheckCircle else Icons.Outlined.Info,
                 )
             }
