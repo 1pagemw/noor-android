@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - feature/android-scaffold
   pull_request:
     branches:
       - main
+      - feature/android-scaffold
   workflow_dispatch:
 
 permissions:
