@@ -66,7 +66,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -1398,7 +1397,7 @@ private fun SettingsScreen(
                         confirmClear = false
                         onDataChanged()
                     },
-                    colors = TextButtonDefaults.textButtonColors(contentColor = NoorColors.Error),
+                    colors = ButtonDefaults.textButtonColors(contentColor = NoorColors.Error),
                 ) { Text("Clear progress") }
             },
             dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
