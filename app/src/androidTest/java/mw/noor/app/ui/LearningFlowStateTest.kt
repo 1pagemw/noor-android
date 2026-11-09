@@ -4,9 +4,9 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -59,8 +59,8 @@ class LearningFlowStateTest {
             }
         }
 
-        composeRule.onNodeWithText("Mark lesson complete").assertDoesNotExist()
-        composeRule.onNodeWithText("Report a content issue").assertDoesNotExist()
+        assertEquals(0, composeRule.onAllNodesWithText("Mark lesson complete").fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithText("Report a content issue").fetchSemanticsNodes().size)
         composeRule.onNodeWithText("Practise this topic").assertIsDisplayed()
     }
 
