@@ -102,6 +102,7 @@ import androidx.work.WorkInfo
 import android.content.Intent
 import mw.noor.app.BuildConfig
 import mw.noor.app.R
+import mw.noor.app.QUIZ_SESSION_QUESTION_COUNT
 import mw.noor.app.shuffledQuizQuestions
 import mw.noor.app.data.ContentCatalogEntry
 import mw.noor.app.data.ContentLesson
@@ -1415,7 +1416,9 @@ internal fun QuizScreen(
     val lessonsCompletedByQuiz = topic.lessons.filter { it.questions.isNotEmpty() }
     val allQuestions = topic.lessons.flatMap { it.questions }
     var quizSeed by rememberSaveable(topic.id) { mutableIntStateOf(Random.nextInt()) }
-    val questions = remember(quizSeed, topic.id) { shuffledQuizQuestions(allQuestions, quizSeed) }
+    val questions = remember(quizSeed, topic.id) {
+        shuffledQuizQuestions(allQuestions, quizSeed, questionLimit = QUIZ_SESSION_QUESTION_COUNT)
+    }
     var questionIndex by rememberSaveable(topic.id) { mutableIntStateOf(0) }
     var selectedAnswer by rememberSaveable(topic.id) { mutableIntStateOf(-1) }
     var correctCount by rememberSaveable(topic.id) { mutableIntStateOf(0) }

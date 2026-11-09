@@ -2,6 +2,8 @@ package mw.noor.app
 
 import kotlin.random.Random
 
+const val QUIZ_SESSION_QUESTION_COUNT = 5
+
 data class QuizQuestion(
     val prompt: String,
     val options: List<String>,
@@ -26,17 +28,20 @@ data class ShuffledQuizQuestion(
 }
 
 /**
- * Deterministically shuffles the order of [questions] and of each question's
- * options for one practice session. The same [seed] always produces the same
- * order, so a session restored after process death shows the same questions
- * and options in the same positions, while a fresh session draws a new seed
- * and a new order. Repeated practice therefore cannot be memorised by
- * position, which keeps practice scores a meaningful signal for the review
- * scheduler.
+ * Deterministically selects up to [questionLimit] questions without replacement,
+ * shuffles their order and shuffles each question's options for one practice
+ * session. If fewer questions are available, all are used. The same [seed]
+ * always reproduces the same selection and order, so a session restored after
+ * process death shows the same questions and options in the same positions.
  */
-fun shuffledQuizQuestions(questions: List<QuizQuestion>, seed: Int): List<ShuffledQuizQuestion> {
+fun shuffledQuizQuestions(
+    questions: List<QuizQuestion>,
+    seed: Int,
+    questionLimit: Int = QUIZ_SESSION_QUESTION_COUNT,
+): List<ShuffledQuizQuestion> {
     if (questions.isEmpty()) return emptyList()
-    val questionOrder = questions.indices.shuffled(Random(seed))
+    val selectedCount = questionLimit.coerceIn(0, questions.size)
+    val questionOrder = questions.indices.shuffled(Random(seed)).take(selectedCount)
     return questionOrder.map { originalIndex ->
         val question = questions[originalIndex]
         val optionOrder = question.options.indices.shuffled(Random(seed * 31 + originalIndex))

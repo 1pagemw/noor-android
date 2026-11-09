@@ -39,3 +39,12 @@
 - **Future form picker recommendation (not implemented):** Keep the pilot Form 3-only experience free of a redundant picker. When Form 4 content is available, provide one persistent, locally stored active-form selector shared across learning screens; offer only forms with usable content and retain progress separately per form. A first-run chooser is optional only when more than one form is available. The specific picker location and whether Today/Profile statistics are filtered or combined remain product-owner decisions.
 - **Checks:** Pending automated CI for the implementation commit. Local sandbox does not have the Android SDK, so Gradle tests/build cannot be run here.
 - **Unresolved:** PR #2 remains open and unmerged pending Vibe review and owner phone smoke test; the picker recommendation needs owner approval before implementation.
+
+
+## 2026-11-09 — Five-question quiz sessions
+
+- **Scope:** Increase the quiz-session target to five questions while retaining seeded randomization, option shuffling, and saved-session reproducibility.
+- **Decision:** Select at most five questions without replacement. If a topic has fewer than five, use all of its available questions rather than duplicate or invent content. Add unit coverage for selection, uniqueness, reproducibility, and smaller/empty limits.
+- **Verified content constraint:** The 13 checked-in Form 3 lesson units currently contain two questions each. Therefore, this code change prepares five-question sessions when verified question pools are expanded, but current topics will still produce two-question quizzes. No scientific questions were fabricated. Five questions per topic requires at least three additional verified questions in each current lesson unit.
+- **Checks:** Pending automatic CI for the latest PR commit. The sandbox has no Android SDK, so local Gradle verification is unavailable.
+- **Unresolved:** PR #2 remains open and unmerged. Vibe review and the owner's phone smoke test are still pending.

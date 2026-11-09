@@ -49,6 +49,40 @@ class QuizQuestionTest {
     }
 
     @Test
+    fun quizSessionSelectsFiveDistinctQuestionsWhenMoreAreAvailable() {
+        val questionPool = (1..9).map { number ->
+            QuizQuestion(
+                prompt = "Question $number",
+                options = listOf("A", "B", "C", "D"),
+                correctOptionIndex = number % 4,
+                id = "question-$number",
+            )
+        }
+
+        val firstSession = shuffledQuizQuestions(questionPool, seed = 123)
+        val restoredSession = shuffledQuizQuestions(questionPool, seed = 123)
+
+        assertEquals(QUIZ_SESSION_QUESTION_COUNT, firstSession.size)
+        assertEquals(QUIZ_SESSION_QUESTION_COUNT, firstSession.map { it.question.id }.toSet().size)
+        assertTrue(firstSession.all { item -> questionPool.any { it.id == item.question.id } })
+        assertEquals(firstSession, restoredSession)
+    }
+
+    @Test
+    fun quizSessionUsesEveryAvailableQuestionWhenPoolHasFewerThanFive() {
+        val shuffled = shuffledQuizQuestions(sessionQuestions, seed = 7)
+
+        assertEquals(sessionQuestions.size, shuffled.size)
+        assertEquals(sessionQuestions.map { it.prompt }.toSet(), shuffled.map { it.question.prompt }.toSet())
+    }
+
+    @Test
+    fun nonPositiveQuestionLimitReturnsNoQuestions() {
+        assertTrue(shuffledQuizQuestions(sessionQuestions, seed = 7, questionLimit = 0).isEmpty())
+        assertTrue(shuffledQuizQuestions(sessionQuestions, seed = 7, questionLimit = -2).isEmpty())
+    }
+
+    @Test
     fun correctIndexStillPointsAtTheOriginalCorrectOption() {
         val shuffled = shuffledQuizQuestions(sessionQuestions, seed = 7)
         shuffled.forEach { item ->
