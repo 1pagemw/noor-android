@@ -160,6 +160,7 @@ fun NoorApp() {
     var selectedPackId by rememberSaveable { mutableStateOf("") }
     var selectedTopicId by rememberSaveable { mutableStateOf("") }
     var selectedLessonId by rememberSaveable { mutableStateOf("") }
+    var quizOriginLessonId by rememberSaveable { mutableStateOf("") }
     var dataVersion by remember { mutableIntStateOf(0) }
     var textScale by remember { mutableStateOf(repository.textScale()) }
 
@@ -258,6 +259,7 @@ fun NoorApp() {
                         },
                         onStartQuiz = { topic ->
                             selectedTopicId = topic.id
+                            quizOriginLessonId = ""
                             navigateTo("quiz")
                         },
                     )
@@ -278,6 +280,7 @@ fun NoorApp() {
                         onStartReview = { entry, topic ->
                             selectedPackId = entry.id
                             selectedTopicId = topic.id
+                            quizOriginLessonId = ""
                             selectedTabName = NoorTab.REVIEW.name
                             navigateTo("quiz")
                         },
@@ -297,8 +300,10 @@ fun NoorApp() {
                         entry = currentLessonEntry,
                         repository = repository,
                         onBack = navigateBack,
-                        onStartQuiz = { navigateTo("quiz") },
-                        onReportContent = { navigateTo("report") },
+                        onStartQuiz = {
+                            quizOriginLessonId = selectedLessonId
+                            navigateTo("quiz")
+                        },
                         onProgressChanged = { dataVersion += 1 },
                     )
                 } else {
@@ -309,8 +314,16 @@ fun NoorApp() {
                         subject = currentSubjectIndex,
                         topic = currentTopicIndex,
                         repository = repository,
+                        currentLessonId = quizOriginLessonId.takeIf { it.isNotBlank() },
                         onBack = { navigateBack() },
                         onFinished = { _, _ -> navigateBack() },
+                        onNextLesson = { next ->
+                            selectedPackId = next.packId
+                            selectedTopicId = next.topicId
+                            selectedLessonId = next.lessonId
+                            repository.saveLastLesson(LastLesson(next.packId, next.topicId, next.lessonId))
+                            encodedNavigationState = navigationState.navigateBack().navigateTo("lesson").encode()
+                        },
                         onProgressChanged = { dataVersion += 1 },
                     )
                 } else {
@@ -332,6 +345,7 @@ fun NoorApp() {
                     onStartReview = { entry, topic ->
                         selectedPackId = entry.id
                         selectedTopicId = topic.id
+                        quizOriginLessonId = ""
                         selectedTabName = NoorTab.REVIEW.name
                         navigateTo("quiz")
                     },
@@ -1014,13 +1028,9 @@ internal fun LessonScreen(
     repository: NoorRepository,
     onBack: () -> Unit,
     onStartQuiz: () -> Unit,
-    onReportContent: () -> Unit,
-    onProgressChanged: () -> Unit,
 ) {
-    var completed by remember(lesson.id) { mutableStateOf(lesson.id in repository.completedLessonIds()) }
-    var completedOffline by rememberSaveable(lesson.id) {
-        mutableStateOf(repository.wasLessonCompletedOffline(lesson.id))
-    }
+    val completed = lesson.id in repository.completedLessonIds()
+    val completedOffline = repository.wasLessonCompletedOffline(lesson.id)
     val lessonPosition = (topic.lessons.indexOfFirst { it.id == lesson.id } + 1).coerceAtLeast(0)
     val lessonTotal = topic.lessons.size.coerceAtLeast(1)
     ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 680.dp) {
@@ -1068,26 +1078,8 @@ internal fun LessonScreen(
                     color = NoorColors.MossDark,
                 )
             }
-        } else {
-            TextButton(
-                onClick = {
-                    completedOffline = !repository.hasValidatedConnection()
-                    repository.markLessonCompleted(lesson.id, completedOffline = completedOffline)
-                    repository.recordStudyActivity()
-                    completed = true
-                    onProgressChanged()
-                },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                Icon(Icons.Outlined.Check, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Mark lesson complete")
-            }
         }
         PrimaryButton(text = "Practise this topic", onClick = onStartQuiz)
-        TextButton(onClick = onReportContent, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text("Report a content issue")
-        }
     }
 }
 
@@ -1412,10 +1404,13 @@ internal fun QuizScreen(
     repository: NoorRepository,
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit,
+    onOpenNextLesson: (LessonIndexEntry) -> Unit,
+    nextLesson: LessonIndexEntry?,
     onProgressChanged: () -> Unit,
     cachedLessonCount: Int,
     totalLessonCount: Int,
 ) {
+    val lessonsCompletedByQuiz = topic.lessons.filter { it.questions.isNotEmpty() }
     val allQuestions = topic.lessons.flatMap { it.questions }
     var quizSeed by rememberSaveable(topic.id) { mutableIntStateOf(Random.nextInt()) }
     val questions = remember(quizSeed, topic.id) { shuffledQuizQuestions(allQuestions, quizSeed) }
@@ -1441,6 +1436,7 @@ internal fun QuizScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = NoorColors.MossDark,
             )
+            Text("${countLabel(lessonsCompletedByQuiz.size, "lesson")} complete.", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
             StatusBadge(
                 text = when {
                     correctCount * 100 / questions.size >= 80 -> "Strong work"
@@ -1448,7 +1444,15 @@ internal fun QuizScreen(
                     else -> "Review recommended"
                 },
             )
-            PrimaryButton(text = "Finish practice", onClick = { onFinished(correctCount, questions.size) })
+            if (nextLesson != null) {
+                InfoCard(title = "Up next", body = nextLesson.title, icon = Icons.Outlined.MenuBook)
+                PrimaryButton(text = "Next lesson", onClick = { onOpenNextLesson(nextLesson) })
+                TextButton(onClick = { onFinished(correctCount, questions.size) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text("Finish practice")
+                }
+            } else {
+                PrimaryButton(text = "Finish practice", onClick = { onFinished(correctCount, questions.size) })
+            }
         }
         return
     }
@@ -1519,6 +1523,10 @@ internal fun QuizScreen(
                     answered = false
                 } else {
                     resultWasOffline = !repository.hasValidatedConnection()
+                    val completedBeforeQuiz = repository.completedLessonIds()
+                    lessonsCompletedByQuiz.filterNot { it.id in completedBeforeQuiz }.forEach { lesson ->
+                        repository.markLessonCompleted(lesson.id, completedOffline = resultWasOffline)
+                    }
                     repository.recordQuizResult(topic.id, correctCount, questions.size)
                     repository.recordStudyActivity()
                     onProgressChanged()

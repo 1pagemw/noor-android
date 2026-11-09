@@ -13,6 +13,7 @@ import mw.noor.app.ui.shouldAutomaticallyStartDownload
 import mw.noor.app.ui.shouldUseNavigationRail
 import mw.noor.app.ui.responsiveGridColumnCount
 import mw.noor.app.ui.visibleSearchResults
+import mw.noor.app.ui.nextIncompleteLessonId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -59,6 +60,29 @@ class RouteAndProgressTest {
         assertEquals("subject", state.currentRoute)
         state = state.navigateBack()
         assertEquals("tabs", state.currentRoute)
+    }
+
+    @Test
+    fun nextIncompleteLessonFollowsCatalogueOrderWithoutWrapping() {
+        val order = listOf("a", "b", "c", "d")
+
+        assertEquals("b", nextIncompleteLessonId(order, "a", setOf("a")))
+        assertEquals("d", nextIncompleteLessonId(order, "b", setOf("a", "b", "c")))
+        assertNull(nextIncompleteLessonId(order, "d", setOf("a", "b", "c", "d")))
+        assertEquals("a", nextIncompleteLessonId(order, null, emptySet()))
+    }
+
+    @Test
+    fun openingNextLessonReplacesQuizResultsAndBackReturnsToLearningContext() {
+        val state = RouteHistory.initial()
+            .navigateTo("subject")
+            .navigateTo("lesson")
+            .navigateTo("quiz")
+            .navigateBack()
+            .navigateTo("lesson")
+
+        assertEquals("lesson", state.currentRoute)
+        assertEquals("subject", state.navigateBack().currentRoute)
     }
 
     @Test
