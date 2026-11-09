@@ -5,13 +5,12 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import mw.noor.app.MainActivity
 import mw.noor.app.QuizQuestion
 import mw.noor.app.data.ContentLesson
 import mw.noor.app.data.ContentPack
@@ -29,7 +28,7 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class LearningFlowStateTest {
     @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    val composeRule = createComposeRule()
 
     @Test
     fun lessonScreenHasNoManualCompletionOrReportActions() {
