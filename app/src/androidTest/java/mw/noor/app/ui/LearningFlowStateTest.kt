@@ -110,7 +110,15 @@ class LearningFlowStateTest {
             sourceUrls = listOf("https://example.test/next.json"),
             order = 1,
         )
+        val previousLesson = nextLesson.copy(
+            topicId = "previous-topic",
+            topicTitle = "Previous topic",
+            lessonId = "flow-test-previous-lesson",
+            title = "Previous lesson title",
+            order = 0,
+        )
         var openedNextLessonId: String? = null
+        var openedPreviousLessonId: String? = null
 
         composeRule.setContent {
             MaterialTheme {
@@ -121,7 +129,9 @@ class LearningFlowStateTest {
                     onBack = {},
                     onFinished = { _, _ -> },
                     onOpenNextLesson = { openedNextLessonId = it.lessonId },
+                    onOpenPreviousLesson = { openedPreviousLessonId = it.lessonId },
                     nextLesson = nextLesson,
+                    previousLesson = previousLesson,
                     onProgressChanged = {},
                     cachedLessonCount = 2,
                     totalLessonCount = 2,
@@ -135,9 +145,11 @@ class LearningFlowStateTest {
         composeRule.onNodeWithText("0%").assertIsDisplayed()
         composeRule.onNodeWithText("1 lesson complete.").assertIsDisplayed()
         composeRule.onNodeWithText("Up next").assertIsDisplayed()
+        composeRule.onNodeWithText("Previous lesson").performClick()
         composeRule.onNodeWithText("Next lesson").performClick()
         composeRule.runOnIdle {
             assertEquals("flow-test-next-lesson", openedNextLessonId)
+            assertEquals("flow-test-previous-lesson", openedPreviousLessonId)
             assertTrue("Completion must be separate from quiz accuracy", "flow-test-lesson" in repository.completedLessonIds())
             assertFalse("A lesson without quiz questions must stay incomplete", "flow-test-empty-lesson" in repository.completedLessonIds())
             assertEquals(0, repository.topicProgress(topic.id)?.lastScorePercent ?: -1)

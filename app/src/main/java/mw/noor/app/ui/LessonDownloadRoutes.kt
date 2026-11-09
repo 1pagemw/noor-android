@@ -89,7 +89,7 @@ internal fun TopicQuizRoute(
     currentLessonId: String?,
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit,
-    onNextLesson: (LessonIndexEntry) -> Unit,
+    onOpenLesson: (LessonIndexEntry) -> Unit,
     onProgressChanged: () -> Unit,
 ) {
     val context = LocalContext.current.applicationContext
@@ -130,14 +130,22 @@ internal fun TopicQuizRoute(
         completedLessonIds = repository.completedLessonIds(),
     )
     val nextLesson = subject.lessons.firstOrNull { it.lessonId == nextLessonId }
+    val previousAnchor = currentLessonId ?: topic.lessons.firstOrNull()?.lessonId
+    val previousLessonId = previousLessonId(
+        orderedLessonIds = subject.lessons.map { it.lessonId },
+        currentLessonId = previousAnchor,
+    )
+    val previousLesson = subject.lessons.firstOrNull { it.lessonId == previousLessonId }
     QuizScreen(
         pack = pack,
         topic = quizTopic,
         repository = repository,
         onBack = onBack,
         onFinished = onFinished,
-        onOpenNextLesson = onNextLesson,
+        onOpenNextLesson = onOpenLesson,
+        onOpenPreviousLesson = onOpenLesson,
         nextLesson = nextLesson,
+        previousLesson = previousLesson,
         onProgressChanged = onProgressChanged,
         cachedLessonCount = cachedLessons.size,
         totalLessonCount = topic.lessons.size,
@@ -203,6 +211,15 @@ internal fun nextIncompleteLessonId(
     return orderedLessonIds
         .drop((currentIndex + 1).coerceAtLeast(0))
         .firstOrNull { it !in completedLessonIds }
+}
+
+internal fun previousLessonId(
+    orderedLessonIds: List<String>,
+    currentLessonId: String?,
+): String? {
+    val currentIndex = currentLessonId?.let(orderedLessonIds::indexOf) ?: return null
+    if (currentIndex <= 0) return null
+    return orderedLessonIds.getOrNull(currentIndex - 1)
 }
 
 private fun LessonSubjectIndex.toPack(topics: List<ContentTopic>): ContentPack = ContentPack(

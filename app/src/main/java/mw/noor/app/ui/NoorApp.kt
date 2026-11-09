@@ -317,11 +317,11 @@ fun NoorApp() {
                         currentLessonId = quizOriginLessonId.takeIf { it.isNotBlank() },
                         onBack = { navigateBack() },
                         onFinished = { _, _ -> navigateBack() },
-                        onNextLesson = { next ->
-                            selectedPackId = next.packId
-                            selectedTopicId = next.topicId
-                            selectedLessonId = next.lessonId
-                            repository.saveLastLesson(LastLesson(next.packId, next.topicId, next.lessonId))
+                        onOpenLesson = { destination ->
+                            selectedPackId = destination.packId
+                            selectedTopicId = destination.topicId
+                            selectedLessonId = destination.lessonId
+                            repository.saveLastLesson(LastLesson(destination.packId, destination.topicId, destination.lessonId))
                             encodedNavigationState = navigationState.navigateBack().navigateTo("lesson").encode()
                         },
                         onProgressChanged = { dataVersion += 1 },
@@ -1405,7 +1405,9 @@ internal fun QuizScreen(
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit,
     onOpenNextLesson: (LessonIndexEntry) -> Unit,
+    onOpenPreviousLesson: (LessonIndexEntry) -> Unit,
     nextLesson: LessonIndexEntry?,
+    previousLesson: LessonIndexEntry?,
     onProgressChanged: () -> Unit,
     cachedLessonCount: Int,
     totalLessonCount: Int,
@@ -1452,6 +1454,14 @@ internal fun QuizScreen(
                 }
             } else {
                 PrimaryButton(text = "Finish practice", onClick = { onFinished(correctCount, questions.size) })
+            }
+            if (previousLesson != null) {
+                TextButton(
+                    onClick = { onOpenPreviousLesson(previousLesson) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) {
+                    Text("Previous lesson")
+                }
             }
         }
         return
