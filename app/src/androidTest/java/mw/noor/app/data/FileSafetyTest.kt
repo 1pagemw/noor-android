@@ -78,7 +78,12 @@ class FileSafetyTest {
             recoveryThread.join(5_000)
             deletionThread.join(5_000)
 
-            threadFailure.get()?.let { throw AssertionError("Concurrent repository operation failed", it) }
+            threadFailure.get()?.let { error ->
+                throw AssertionError(
+                    "Concurrent repository operation failed: ${error.javaClass.name}: ${error.message}",
+                    error,
+                )
+            }
             assertFalse("Both threads should finish", recoveryThread.isAlive || deletionThread.isAlive)
             assertFalse("Deletion must wait until the other repository finishes recovery", deletionFinishedWhileGateHeld)
             assertTrue(deleteFinished.await(1, TimeUnit.SECONDS))
