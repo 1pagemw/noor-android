@@ -37,7 +37,6 @@ internal fun LessonDownloadRoute(
     repository: NoorRepository,
     onBack: () -> Unit,
     onStartQuiz: () -> Unit,
-    onReportContent: () -> Unit,
     onProgressChanged: () -> Unit,
 ) {
     val context = LocalContext.current.applicationContext
@@ -79,8 +78,6 @@ internal fun LessonDownloadRoute(
         repository = repository,
         onBack = onBack,
         onStartQuiz = onStartQuiz,
-        onReportContent = onReportContent,
-        onProgressChanged = onProgressChanged,
     )
 }
 
@@ -89,8 +86,10 @@ internal fun TopicQuizRoute(
     subject: LessonSubjectIndex,
     topic: LessonTopicIndex,
     repository: NoorRepository,
+    currentLessonId: String?,
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit,
+    onOpenLesson: (LessonIndexEntry) -> Unit,
     onProgressChanged: () -> Unit,
 ) {
     val context = LocalContext.current.applicationContext
@@ -122,12 +121,31 @@ internal fun TopicQuizRoute(
 
     val quizTopic = ContentTopic(topic.id, topic.title, topic.description, cachedLessons)
     val pack = subject.toPack(listOf(quizTopic))
+    val topicStartIndex = subject.lessons.indexOfFirst { it.topicId == topic.id }
+    val precedingTopicLessonId = subject.lessons.getOrNull(topicStartIndex - 1)?.lessonId
+    val sequenceAnchor = currentLessonId ?: precedingTopicLessonId
+    val nextLessonId = nextIncompleteLessonId(
+        orderedLessonIds = subject.lessons.map { it.lessonId },
+        currentLessonId = sequenceAnchor,
+        completedLessonIds = repository.completedLessonIds(),
+    )
+    val nextLesson = subject.lessons.firstOrNull { it.lessonId == nextLessonId }
+    val previousAnchor = currentLessonId ?: topic.lessons.firstOrNull()?.lessonId
+    val previousLessonId = previousLessonId(
+        orderedLessonIds = subject.lessons.map { it.lessonId },
+        currentLessonId = previousAnchor,
+    )
+    val previousLesson = subject.lessons.firstOrNull { it.lessonId == previousLessonId }
     QuizScreen(
         pack = pack,
         topic = quizTopic,
         repository = repository,
         onBack = onBack,
         onFinished = onFinished,
+        onOpenNextLesson = onOpenLesson,
+        onOpenPreviousLesson = onOpenLesson,
+        nextLesson = nextLesson,
+        previousLesson = previousLesson,
         onProgressChanged = onProgressChanged,
         cachedLessonCount = cachedLessons.size,
         totalLessonCount = topic.lessons.size,
@@ -183,6 +201,26 @@ private fun List<WorkInfo>.currentDownload(): WorkInfo? =
 
 internal fun shouldAutomaticallyStartDownload(state: WorkInfo.State?): Boolean =
     state == null || state == WorkInfo.State.CANCELLED
+
+internal fun nextIncompleteLessonId(
+    orderedLessonIds: List<String>,
+    currentLessonId: String?,
+    completedLessonIds: Set<String>,
+): String? {
+    val currentIndex = currentLessonId?.let(orderedLessonIds::indexOf) ?: -1
+    return orderedLessonIds
+        .drop((currentIndex + 1).coerceAtLeast(0))
+        .firstOrNull { it !in completedLessonIds }
+}
+
+internal fun previousLessonId(
+    orderedLessonIds: List<String>,
+    currentLessonId: String?,
+): String? {
+    val currentIndex = currentLessonId?.let(orderedLessonIds::indexOf) ?: return null
+    if (currentIndex <= 0) return null
+    return orderedLessonIds.getOrNull(currentIndex - 1)
+}
 
 private fun LessonSubjectIndex.toPack(topics: List<ContentTopic>): ContentPack = ContentPack(
     id = id,
