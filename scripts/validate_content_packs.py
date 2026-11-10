@@ -64,6 +64,10 @@ def validate_pack(entry: dict) -> tuple[dict, int, int]:
     if "Draft" not in pack["curriculumStatus"]:
         fail(f"{pack_id} must retain its draft-review status")
 
+    source_urls = entry.get("sourceUrls", [])
+    if not source_urls or any(not str(url).startswith("https://") for url in source_urls):
+        fail(f"{pack_id} source URLs must all use HTTPS")
+
     topic_ids: set[str] = set()
     lesson_ids: set[str] = set()
     question_ids: set[str] = set()
@@ -196,6 +200,12 @@ def validate_lesson_units(packs: list[dict]) -> int:
     lesson_catalog = load_json(LESSON_CATALOG_PATH, "lesson catalogue")
     if not isinstance(lesson_catalog, dict) or lesson_catalog.get("catalogVersion") != 1:
         fail("lesson catalogue must have catalogVersion 1")
+    for subject in lesson_catalog.get("subjects", []):
+        for topic in subject.get("topics", []):
+            for lesson in topic.get("lessons", []):
+                urls = lesson.get("sourceUrls", [])
+                if not urls or any(not str(url).startswith("https://") for url in urls):
+                    fail(f"lesson {lesson.get('lessonId')} source URLs must all use HTTPS")
     if lesson_catalog.get("subjects") != expected_subjects:
         fail("lesson catalogue metadata/order/size/hash/URLs do not match generated units and canonical packs")
 
