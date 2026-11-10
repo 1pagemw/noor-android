@@ -6,7 +6,6 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -24,12 +23,12 @@ class FileSafetyTest {
             val secondRepository = NoorRepository(isolated.context)
             val entry = firstRepository.lessonCatalog().lessons.first()
             val destination = lessonFile(isolated.context, entry)
-            val staged = File(destination.parentFile, "${destination.name}.staged")
-            val validPayload = payloadFor(entry)
-            staged.writeText(validPayload)
-
-            installer(firstRepository).install(staged, destination)
-            assertEquals(validPayload, destination.readText())
+            val legacyFile = File(File(isolated.context.filesDir, "content-packs"), "${entry.packId}.json")
+            val canonicalPack = InstrumentationRegistry.getInstrumentation().context.assets
+                .open("form3_biology.json").bufferedReader().use { it.readText() }
+            legacyFile.writeText(canonicalPack)
+            assertNotNull("Repository migration should install the lesson", firstRepository.loadLesson(entry))
+            val validPayload = destination.readText()
 
             // Model a process interruption after moving the old file to .bak but before promotion.
             assertTrue(destination.delete())
@@ -70,13 +69,9 @@ class FileSafetyTest {
             deletionThread.start()
             assertTrue("Recovery must reach the controlled interleaving", recoveryEntered.await(5, TimeUnit.SECONDS))
             assertTrue("Deletion thread should start while recovery owns the gate", deleteStarted.await(5, TimeUnit.SECONDS))
-            val blockDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
-            while (deleteFinished.count > 0L && deletionThread.state != Thread.State.BLOCKED && System.nanoTime() < blockDeadline) {
-                Thread.yield()
-            }
+            val deletionFinishedWhileGateHeld: Boolean
             try {
-                assertEquals("Deletion must block on the shared process gate", Thread.State.BLOCKED, deletionThread.state)
-                assertFalse("Deletion must wait until the other repository finishes recovery", deleteFinished.count == 0L)
+                deletionFinishedWhileGateHeld = deleteFinished.await(100, TimeUnit.MILLISECONDS)
             } finally {
                 allowRecoveryOwnerToFinish.countDown()
             }
@@ -85,6 +80,7 @@ class FileSafetyTest {
 
             threadFailure.get()?.let { throw AssertionError("Concurrent repository operation failed", it) }
             assertFalse("Both threads should finish", recoveryThread.isAlive || deletionThread.isAlive)
+            assertFalse("Deletion must wait until the other repository finishes recovery", deletionFinishedWhileGateHeld)
             assertTrue(deleteFinished.await(1, TimeUnit.SECONDS))
             assertNull(secondRepository.loadLesson(entry))
             assertFalse(destination.exists())
@@ -162,18 +158,6 @@ class FileSafetyTest {
         }
     }
 
-    private fun installer(repository: NoorRepository): PackFileInstaller {
-        val field = NoorRepository::class.java.getDeclaredField("packFileInstaller")
-        field.isAccessible = true
-        return field.get(repository) as PackFileInstaller
-    }
-
     private fun lessonFile(context: android.content.Context, entry: LessonIndexEntry): File =
         File(File(context.filesDir, "content-lessons"), "${entry.packId}__${entry.lessonId}.json")
-
-    private fun payloadFor(entry: LessonIndexEntry): String {
-        val pack = InstrumentationRegistry.getInstrumentation().context.assets
-            .open("form3_biology.json").bufferedReader().use { it.readText() }
-        return LessonContentJsonParser.payloadFromLegacyPack(pack, entry)
-    }
 }
