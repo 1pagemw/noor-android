@@ -42,11 +42,18 @@ class FileSafetyTest {
             val deleteFinished = CountDownLatch(1)
             val threadFailure = AtomicReference<Throwable?>(null)
             val recoveredLesson = AtomicReference<ContentLesson?>(null)
+            val recoverySnapshot = AtomicReference<String?>(null)
             val deletionResult = AtomicReference<Boolean?>(null)
             val recoveryThread = Thread {
                 try {
                     synchronized(NoorFileGate.lock) {
-                        recoveredLesson.set(firstRepository.loadLesson(entry))
+                        val lesson = firstRepository.loadLesson(entry)
+                        recoveredLesson.set(lesson)
+                        recoverySnapshot.set(
+                            "lesson=${lesson?.id}, destinationExists=${destination.exists()}, " +
+                                "backupExists=${backup.exists()}, destinationLength=${destination.length()}, " +
+                                "backupLength=${backup.length()}, expectedPayloadLength=${validPayload.length}",
+                        )
                         recoveryEntered.countDown()
                         check(allowRecoveryOwnerToFinish.await(5, TimeUnit.SECONDS))
                     }
@@ -88,7 +95,10 @@ class FileSafetyTest {
                 )
             }
             assertFalse("Both threads should finish", recoveryThread.isAlive || deletionThread.isAlive)
-            assertNotNull("Recovery should restore and read the lesson before deletion", recoveredLesson.get())
+            assertNotNull(
+                "Recovery should restore and read the lesson before deletion; ${recoverySnapshot.get()}",
+                recoveredLesson.get(),
+            )
             assertFalse("Deletion must wait until the other repository finishes recovery", deletionFinishedWhileGateHeld)
             assertTrue(deleteFinished.await(1, TimeUnit.SECONDS))
             assertTrue("The second repository should report successful deletion", deletionResult.get() == true)
