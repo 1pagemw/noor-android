@@ -73,8 +73,6 @@ class NoorRepository(context: Context) {
 
     fun loadLesson(entry: LessonIndexEntry): ContentLesson? {
         migrateLegacyPack(entry.packId)
-        val file = lessonFile(entry)
-        if (!file.isFile) return null
         return loadStoredPayload(entry)?.lesson
     }
 

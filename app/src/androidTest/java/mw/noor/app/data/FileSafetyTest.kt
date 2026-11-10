@@ -42,18 +42,12 @@ class FileSafetyTest {
             val deleteFinished = CountDownLatch(1)
             val threadFailure = AtomicReference<Throwable?>(null)
             val recoveredLesson = AtomicReference<ContentLesson?>(null)
-            val recoverySnapshot = AtomicReference<String?>(null)
             val deletionResult = AtomicReference<Boolean?>(null)
             val recoveryThread = Thread {
                 try {
                     synchronized(NoorFileGate.lock) {
                         val lesson = firstRepository.loadLesson(entry)
                         recoveredLesson.set(lesson)
-                        recoverySnapshot.set(
-                            "lesson=${lesson?.id}, destinationExists=${destination.exists()}, " +
-                                "backupExists=${backup.exists()}, destinationLength=${destination.length()}, " +
-                                "backupLength=${backup.length()}, expectedPayloadLength=${validPayload.length}",
-                        )
                         recoveryEntered.countDown()
                         check(allowRecoveryOwnerToFinish.await(5, TimeUnit.SECONDS))
                     }
@@ -96,7 +90,7 @@ class FileSafetyTest {
             }
             assertFalse("Both threads should finish", recoveryThread.isAlive || deletionThread.isAlive)
             assertNotNull(
-                "Recovery should restore and read the lesson before deletion; ${recoverySnapshot.get()}",
+                "Recovery should restore and read the lesson before deletion",
                 recoveredLesson.get(),
             )
             assertFalse("Deletion must wait until the other repository finishes recovery", deletionFinishedWhileGateHeld)
@@ -107,6 +101,28 @@ class FileSafetyTest {
             assertFalse(backup.exists())
             assertFalse(File(destination.parentFile, "${destination.name}.tmp").exists())
             assertFalse(File(destination.parentFile, "${destination.name}.migration.tmp").exists())
+        } finally {
+            isolated.cleanup()
+        }
+    }
+
+    @Test
+    fun loadingLessonRestoresBackupWhenDestinationIsMissing() {
+        val isolated = IsolatedNoorContext.create("restore-lesson-backup")
+        try {
+            val repository = NoorRepository(isolated.context)
+            val entry = repository.lessonCatalog().lessons.first()
+            val destination = lessonFile(isolated.context, entry)
+            val canonicalPack = InstrumentationRegistry.getInstrumentation().context.assets
+                .open("form3_biology.json").bufferedReader().use { it.readText() }
+            val validPayload = LessonContentJsonParser.payloadFromLegacyPack(canonicalPack, entry)
+            val backup = File(destination.parentFile, "${destination.name}.bak").apply { writeText(validPayload) }
+
+            val recovered = repository.loadLesson(entry)
+
+            assertNotNull("The valid backup should be restored and parsed", recovered)
+            assertTrue(destination.isFile)
+            assertFalse(backup.exists())
         } finally {
             isolated.cleanup()
         }
