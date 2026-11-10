@@ -41,10 +41,12 @@ class FileSafetyTest {
             val deleteStarted = CountDownLatch(1)
             val deleteFinished = CountDownLatch(1)
             val threadFailure = AtomicReference<Throwable?>(null)
+            val recoveredLesson = AtomicReference<ContentLesson?>(null)
+            val deletionResult = AtomicReference<Boolean?>(null)
             val recoveryThread = Thread {
                 try {
                     synchronized(NoorFileGate.lock) {
-                        assertNotNull(firstRepository.loadLesson(entry))
+                        recoveredLesson.set(firstRepository.loadLesson(entry))
                         recoveryEntered.countDown()
                         check(allowRecoveryOwnerToFinish.await(5, TimeUnit.SECONDS))
                     }
@@ -57,7 +59,7 @@ class FileSafetyTest {
                 try {
                     check(recoveryEntered.await(5, TimeUnit.SECONDS))
                     deleteStarted.countDown()
-                    assertTrue(secondRepository.deleteLesson(entry))
+                    deletionResult.set(secondRepository.deleteLesson(entry))
                 } catch (error: Throwable) {
                     threadFailure.compareAndSet(null, error)
                 } finally {
@@ -80,13 +82,16 @@ class FileSafetyTest {
 
             threadFailure.get()?.let { error ->
                 throw AssertionError(
-                    "Concurrent repository operation failed: ${error.javaClass.name}: ${error.message}",
+                    "Concurrent repository operation failed: ${error.javaClass.name}: ${error.message}; " +
+                        "at ${error.stackTrace.firstOrNull()}",
                     error,
                 )
             }
             assertFalse("Both threads should finish", recoveryThread.isAlive || deletionThread.isAlive)
+            assertNotNull("Recovery should restore and read the lesson before deletion", recoveredLesson.get())
             assertFalse("Deletion must wait until the other repository finishes recovery", deletionFinishedWhileGateHeld)
             assertTrue(deleteFinished.await(1, TimeUnit.SECONDS))
+            assertTrue("The second repository should report successful deletion", deletionResult.get() == true)
             assertNull(secondRepository.loadLesson(entry))
             assertFalse(destination.exists())
             assertFalse(backup.exists())
