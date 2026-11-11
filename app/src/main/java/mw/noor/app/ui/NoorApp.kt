@@ -143,11 +143,23 @@ internal fun responsiveGridColumnCount(
     return columns.coerceIn(1, maxColumns)
 }
 
-private data class HomeLessonTarget(
+internal data class HomeLessonTarget(
     val entry: ContentCatalogEntry,
     val topic: ContentTopic,
     val lesson: ContentLesson,
 )
+
+internal fun todayHeroButtonLabel(
+    hasSavedLesson: Boolean,
+    savedLessonCompleted: Boolean,
+    savedTopicCompleted: Boolean,
+    targetTopicDiffers: Boolean,
+): String = when {
+    !hasSavedLesson -> "Start a lesson"
+    savedTopicCompleted && targetTopicDiffers -> "Start a topic"
+    savedLessonCompleted -> "Start a lesson"
+    else -> "Continue learning"
+}
 
 @Composable
 fun NoorApp() {
@@ -547,7 +559,17 @@ private fun TodayScreen(
     }
     val continueTarget = lastOpenedTarget?.takeUnless { it.lesson.id in completedLessons }
         ?: lessonTargets.firstOrNull { it.lesson.id !in completedLessons }
-    val startTarget = continueTarget ?: lessonTargets.firstOrNull()
+    val startTarget = continueTarget
+    val allLessonsComplete = lessonTargets.isNotEmpty() && lessonTargets.all { it.lesson.id in completedLessons }
+    val previousTopicCompleted = lastOpenedTarget?.topic?.lessons
+        ?.takeIf { it.isNotEmpty() }
+        ?.all { it.id in completedLessons } == true
+    val heroButtonLabel = todayHeroButtonLabel(
+        hasSavedLesson = lastOpenedTarget != null,
+        savedLessonCompleted = lastOpenedTarget?.lesson?.id?.let { it in completedLessons } == true,
+        savedTopicCompleted = previousTopicCompleted,
+        targetTopicDiffers = lastOpenedTarget != null && startTarget?.topic?.id != lastOpenedTarget.topic.id,
+    )
     val pathTargets = startTarget?.let { anchor ->
         val subjectLessons = lessonTargets.filter { it.entry.id == anchor.entry.id }
         val startAt = subjectLessons.indexOfFirst { it.lesson.id == anchor.lesson.id }.coerceAtLeast(0)
@@ -620,6 +642,8 @@ private fun TodayScreen(
                 startTarget = startTarget,
                 completedLessons = completedLessons,
                 pathTargets = pathTargets,
+                allLessonsComplete = allLessonsComplete,
+                heroButtonLabel = heroButtonLabel,
                 onBrowse = { onSelectTab(NoorTab.LEARN.name) },
                 onOpenLesson = { target -> onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id)) },
             )
@@ -645,6 +669,8 @@ private fun TodayStudyOverview(
     startTarget: HomeLessonTarget?,
     completedLessons: Set<String>,
     pathTargets: List<HomeLessonTarget>,
+    allLessonsComplete: Boolean,
+    heroButtonLabel: String,
     onBrowse: () -> Unit,
     onOpenLesson: (HomeLessonTarget) -> Unit,
 ) {
@@ -652,7 +678,7 @@ private fun TodayStudyOverview(
         if (maxWidth >= 900.dp) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Top) {
                 Box(Modifier.weight(1.1f)) {
-                    TodayHero(startTarget, completedLessons, onBrowse, onOpenLesson)
+                    TodayHero(startTarget, completedLessons, allLessonsComplete, heroButtonLabel, onBrowse, onOpenLesson)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     TodayPathSection(pathTargets, completedLessons, onBrowse, onOpenLesson)
@@ -660,7 +686,7 @@ private fun TodayStudyOverview(
             }
         } else {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                TodayHero(startTarget, completedLessons, onBrowse, onOpenLesson)
+                TodayHero(startTarget, completedLessons, allLessonsComplete, heroButtonLabel, onBrowse, onOpenLesson)
                 TodayPathSection(pathTargets, completedLessons, onBrowse, onOpenLesson)
             }
         }
@@ -671,16 +697,21 @@ private fun TodayStudyOverview(
 private fun TodayHero(
     target: HomeLessonTarget?,
     completedLessons: Set<String>,
+    allLessonsComplete: Boolean,
+    buttonLabel: String,
     onBrowse: () -> Unit,
     onOpenLesson: (HomeLessonTarget) -> Unit,
 ) {
-    if (target == null) {
+    if (allLessonsComplete) {
+        AllLessonsCompleteCard(onBrowse)
+    } else if (target == null) {
         StartLearningCard(onBrowse)
     } else {
         ContinueLearningCard(
             target = target,
             completedLessons = target.topic.lessons.count { it.id in completedLessons },
             totalLessons = target.topic.lessons.size,
+            buttonLabel = buttonLabel,
             onClick = { onOpenLesson(target) },
         )
     }
@@ -715,18 +746,22 @@ private fun TodayPathSection(
 }
 
 @Composable
-private fun ContinueLearningCard(target: HomeLessonTarget, completedLessons: Int, totalLessons: Int, onClick: () -> Unit) {
+internal fun ContinueLearningCard(
+    target: HomeLessonTarget,
+    completedLessons: Int,
+    totalLessons: Int,
+    buttonLabel: String,
+    onClick: () -> Unit,
+) {
     Card(
-        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = NoorColors.MossDark),
         shape = RoundedCornerShape(20.dp),
     ) {
-        Row(
+        Column(
             Modifier.fillMaxWidth().padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("${target.entry.subject} · ${target.topic.title}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
                 Text(target.lesson.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, maxLines = 2)
                 Text(
@@ -746,10 +781,41 @@ private fun ContinueLearningCard(target: HomeLessonTarget, completedLessons: Int
                     trackColor = Color.White.copy(alpha = 0.22f),
                 )
             }
-            Surface(color = NoorColors.Mint, shape = CircleShape, modifier = Modifier.size(44.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Open lesson", tint = NoorColors.MossDark)
-                }
+            Button(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = NoorColors.MossDark),
+            ) {
+                Text(buttonLabel, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Outlined.ArrowForward, contentDescription = null)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllLessonsCompleteCard(onBrowse: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = NoorColors.MossDark),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("All lessons complete", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+            Text("Explore another topic or revisit your saved lessons.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+            Button(
+                onClick = onBrowse,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = NoorColors.MossDark),
+            ) {
+                Text("Browse topics", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Outlined.ArrowForward, contentDescription = null)
             }
         }
     }

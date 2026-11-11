@@ -14,6 +14,7 @@ import mw.noor.app.ui.shouldUseNavigationRail
 import mw.noor.app.ui.responsiveGridColumnCount
 import mw.noor.app.ui.visibleSearchResults
 import mw.noor.app.ui.nextIncompleteLessonId
+import mw.noor.app.ui.todayHeroButtonLabel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -70,6 +71,14 @@ class RouteAndProgressTest {
         assertEquals("d", nextIncompleteLessonId(order, "b", setOf("a", "b", "c")))
         assertNull(nextIncompleteLessonId(order, "d", setOf("a", "b", "c", "d")))
         assertEquals("a", nextIncompleteLessonId(order, null, emptySet()))
+    }
+
+    @Test
+    fun todayHeroButtonCopyReflectsLessonAndTopicState() {
+        assertEquals("Start a lesson", todayHeroButtonLabel(hasSavedLesson = false, savedLessonCompleted = false, savedTopicCompleted = false, targetTopicDiffers = false))
+        assertEquals("Continue learning", todayHeroButtonLabel(hasSavedLesson = true, savedLessonCompleted = false, savedTopicCompleted = false, targetTopicDiffers = false))
+        assertEquals("Start a lesson", todayHeroButtonLabel(hasSavedLesson = true, savedLessonCompleted = true, savedTopicCompleted = false, targetTopicDiffers = false))
+        assertEquals("Start a topic", todayHeroButtonLabel(hasSavedLesson = true, savedLessonCompleted = true, savedTopicCompleted = true, targetTopicDiffers = true))
     }
 
     @Test

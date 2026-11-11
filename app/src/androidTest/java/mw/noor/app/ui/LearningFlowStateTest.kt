@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import mw.noor.app.QuizQuestion
+import mw.noor.app.data.ContentCatalogEntry
 import mw.noor.app.data.ContentLesson
 import mw.noor.app.data.ContentPack
 import mw.noor.app.data.ContentTopic
@@ -64,6 +66,51 @@ class LearningFlowStateTest {
         assertEquals(0, composeRule.onAllNodesWithText("Mark lesson complete").fetchSemanticsNodes().size)
         assertEquals(0, composeRule.onAllNodesWithText("Report a content issue").fetchSemanticsNodes().size)
         composeRule.onNodeWithText("Practise this topic").assertIsDisplayed()
+    }
+
+    @Test
+    fun todayContinueCardUsesButtonForStateAwareLessonActionWithoutTopKicker() {
+        val lesson = ContentLesson(
+            id = "today-card-lesson",
+            title = "Cells: the basic units of life",
+            readTimeMinutes = 3,
+            sections = emptyList(),
+            keyTerms = emptyList(),
+            questions = emptyList(),
+        )
+        val topic = ContentTopic("today-card-topic", "Cells", "", listOf(lesson))
+        val entry = ContentCatalogEntry(
+            id = "today-card-pack",
+            title = "Biology",
+            subject = "Biology",
+            form = 3,
+            description = "",
+            topicCount = 1,
+            contentVersion = 1,
+            sha256 = "0".repeat(64),
+            sizeBytes = 1,
+            sourceUrls = listOf("https://example.test/catalog.json"),
+            curriculumStatus = "verified",
+        )
+        var opened = 0
+
+        composeRule.setContent {
+            MaterialTheme {
+                ContinueLearningCard(
+                    target = HomeLessonTarget(entry, topic, lesson),
+                    completedLessons = 0,
+                    totalLessons = 1,
+                    buttonLabel = "Start a lesson",
+                    onClick = { opened += 1 },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Biology · Cells").assertIsDisplayed()
+        composeRule.onNodeWithText("Cells: the basic units of life").assertIsDisplayed()
+        composeRule.onNodeWithText("Start a lesson").assertIsDisplayed().assertHasClickAction().performClick()
+        assertEquals(0, composeRule.onAllNodesWithText("CONTINUE LEARNING").fetchSemanticsNodes().size)
+        composeRule.runOnIdle { assertEquals(1, opened) }
     }
 
     @Test
