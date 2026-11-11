@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "phy_kinetic_theory",
+  "topicTitle": "Kinetic theory of matter",
+  "topicDescription": "A particle model for solids, liquids, gases, and changes of state.",
+  "lesson": {
+    "id": "phy_kinetic_theory_intro",
+    "title": "Matter as moving particles",
+    "readTimeMinutes": 6,
+    "sections": [
+      {
+        "heading": "The particle model",
+        "body": "The kinetic theory models matter as tiny particles in continual motion. In a solid, particles are close together and vibrate about fixed positions. In a liquid, they remain close but can move past one another. In a gas, particles are far apart and move rapidly in random directions."
+      },
+      {
+        "heading": "Heating and changes of state",
+        "body": "Heating usually transfers energy to particles. Their average kinetic energy rises when temperature rises. A substance can also change state: melting changes a solid to a liquid, boiling changes a liquid to a gas, and condensation changes a gas to a liquid. During a pure substance's change of state, energy can change particle arrangement even while temperature stays constant."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Kinetic energy",
+        "definition": "Energy an object or particle has because of its motion."
+      },
+      {
+        "term": "Melting",
+        "definition": "Change of state from solid to liquid."
+      },
+      {
+        "term": "Condensation",
+        "definition": "Change of state from gas to liquid."
+      }
+    ],
+    "questions": [
+      {
+        "id": "phy_kinetic_theory_q1",
+        "prompt": "How do particles in a solid mainly move?",
+        "options": [
+          "They vibrate about fixed positions",
+          "They move freely far apart",
+          "They stop moving completely",
+          "They flow past one another like a liquid"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "In the particle model, solid particles are closely packed and vibrate about fixed positions."
+      },
+      {
+        "id": "phy_kinetic_theory_q2",
+        "prompt": "What is condensation?",
+        "options": [
+          "Solid changing to liquid",
+          "Liquid changing to gas",
+          "Gas changing to liquid",
+          "Liquid changing to solid"
+        ],
+        "correctOptionIndex": 2,
+        "explanation": "Condensation is the change of state from gas to liquid."
+      }
+    ]
+  }
+}

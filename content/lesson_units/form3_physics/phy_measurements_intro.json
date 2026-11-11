@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "phy_measurements",
+  "topicTitle": "Measurements II",
+  "topicDescription": "Choosing instruments, reading scales, and recording quantities with units.",
+  "lesson": {
+    "id": "phy_measurements_intro",
+    "title": "Making careful measurements",
+    "readTimeMinutes": 5,
+    "sections": [
+      {
+        "heading": "Quantities and units",
+        "body": "A measurement gives a number and a unit. Use an appropriate instrument and record the unit every time. Common SI units include metre (m) for length, kilogram (kg) for mass, second (s) for time, kelvin (K) for thermodynamic temperature, and ampere (A) for electric current. A ruler, measuring cylinder, balance, stopwatch, and thermometer measure different quantities."
+      },
+      {
+        "heading": "Reading instruments",
+        "body": "Check the instrument's scale and zero before measuring. Read a liquid scale at eye level to reduce parallax error. Record a sensible number of digits: extra digits that the scale cannot support do not make a result more accurate. Repeat measurements when possible and compare them to spot unusual readings."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "SI unit",
+        "definition": "A unit defined in the International System of Units."
+      },
+      {
+        "term": "Parallax error",
+        "definition": "A reading error caused by viewing a scale from an angle instead of at eye level."
+      },
+      {
+        "term": "Resolution",
+        "definition": "The smallest change an instrument scale can show."
+      }
+    ],
+    "questions": [
+      {
+        "id": "phy_measurements_q1",
+        "prompt": "What is the SI unit of mass?",
+        "options": [
+          "Metre",
+          "Kilogram",
+          "Newton",
+          "Litre"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "The kilogram (kg) is the SI base unit of mass. A newton is a unit of force."
+      },
+      {
+        "id": "phy_measurements_q2",
+        "prompt": "Why should a liquid scale be read at eye level?",
+        "options": [
+          "To reduce parallax error",
+          "To increase the liquid temperature",
+          "To change the scale spacing",
+          "To remove the need for units"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "Viewing the meniscus at eye level helps avoid an apparent shift in its position called parallax error."
+      }
+    ]
+  }
+}

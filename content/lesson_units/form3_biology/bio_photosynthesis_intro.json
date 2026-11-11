@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_biology",
+  "form": 3,
+  "subject": "Biology",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "bio_photosynthesis",
+  "topicTitle": "Photosynthesis",
+  "topicDescription": "How green plants use light energy to make glucose.",
+  "lesson": {
+    "id": "bio_photosynthesis_intro",
+    "title": "Making food in green plants",
+    "readTimeMinutes": 6,
+    "sections": [
+      {
+        "heading": "The process",
+        "body": "Photosynthesis is the process by which green plants use light energy absorbed by chlorophyll to make glucose from carbon dioxide and water. Oxygen is released. Word equation: carbon dioxide + water → glucose + oxygen. The process stores some light energy as chemical energy in glucose."
+      },
+      {
+        "heading": "Conditions and limiting factors",
+        "body": "Photosynthesis needs light, chlorophyll, carbon dioxide, and water. The rate can be limited by whichever needed factor is in shortest supply. Increasing light or carbon dioxide may increase the rate only until another factor becomes limiting. Glucose may be used in respiration, converted to starch for storage, or used to build other substances."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Chlorophyll",
+        "definition": "A green pigment that absorbs light energy for photosynthesis."
+      },
+      {
+        "term": "Limiting factor",
+        "definition": "A factor in shortest supply that restricts the rate of a process."
+      },
+      {
+        "term": "Starch test",
+        "definition": "Iodine solution turns blue-black when starch is present."
+      }
+    ],
+    "questions": [
+      {
+        "id": "bio_photosynthesis_q1",
+        "prompt": "Which substances are used as raw materials in photosynthesis?",
+        "options": [
+          "Oxygen and glucose",
+          "Carbon dioxide and water",
+          "Nitrogen and oxygen",
+          "Starch and mineral salts"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Plants use carbon dioxide and water to make glucose; oxygen is released as a product."
+      },
+      {
+        "id": "bio_photosynthesis_q2",
+        "prompt": "What does chlorophyll do in photosynthesis?",
+        "options": [
+          "Absorbs light energy",
+          "Absorbs mineral ions from soil",
+          "Releases oxygen by respiration",
+          "Stores water in the root"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "Chlorophyll absorbs light energy that powers the production of glucose."
+      }
+    ]
+  }
+}

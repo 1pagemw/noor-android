@@ -1,32 +1,60 @@
 # Noor design system
 
-This is the starting visual system based on the selected modern screen concepts. It intentionally avoids the earlier botanical direction and keeps the palette restrained.
+The visual direction follows the supplied ten-screen reference while preserving Noor's offline-first behavior, readable lesson typography, and restrained green-and-cream palette. Botanical illustration is used sparingly as a brand accent, not as background decoration.
 
 ## Color palette
 
-- **Moss** `#2E6B4F`: primary actions, selected states, progress, and key emphasis.
+- **Forest green** `#2E6B4E`: primary actions, selected states, progress, and key emphasis.
 - **Deep moss** `#1F4D37`: high-contrast green surfaces and pressed/emphasized states.
 - **Mint** `#DCEBDD`: selected rows, supportive information panels, and soft secondary surfaces.
-- **Warm off-white** `#F7F5EC`: primary app canvas.
+- **Warm cream** `#F6F3EA`: primary app canvas.
+- **White** `#FFFFFF`: cards and reading surfaces.
 - **Ink** `#15181E`: main text and high-contrast icons.
-- **Sun** `#F5C451`: sparing highlight for a small cue or emphasis; never a second dominant color.
 
-Use ink on light surfaces and white or warm off-white on dark green surfaces. Keep status meaning clear without relying on color alone. Avoid adding coral or violet to this first palette.
+Use ink on light surfaces and white or warm cream on dark green surfaces. Keep status meaning clear without relying on color alone. Do not add colors only for decoration; error feedback may retain a distinct error color when needed for clarity.
 
 ## Typography and spacing
 
-Use a clean sans-serif family with a distinct display weight for page titles and strong, legible body text. Keep titles short, use sentence case, and preserve comfortable reading width. Build spacing from a consistent 4/8-point scale. Controls should have generous touch areas and clear selected, disabled, and pressed states.
+Use the platform serif face for the Noor wordmark and display/page/section headings to match the reference's editorial character. Use the bundled **Atkinson Hyperlegible Next** typeface for body text, controls, labels, metadata, and educational reading. The app bundles static Regular, Medium, SemiBold, and Bold TTF instances so body text works on the minimum supported Android version without variable-font support or a network connection. Keep lesson paragraphs at a comfortable 24sp line height, body weight Regular, section headings SemiBold, and page titles Bold. Preserve Android text scaling and readable wrapping.
 
-## Component direction
+The Atkinson font is sourced from [Google Fonts’ Atkinson Hyperlegible Next project](https://github.com/googlefonts/atkinson-hyperlegible-next) and distributed under the SIL Open Font License 1.1. The full licence is included at `licenses/OFL-Atkinson-Hyperlegible-Next.txt`.
 
-Prefer modular cards and compact subject rows with simple geometric line icons. Use rounded corners consistently, subtle borders, and minimal shadow. Keep navigation labels explicit: Today, Learn, Review, and Progress. Focused quiz screens should minimize navigation and make answer choices easy to tap.
+Build spacing from a consistent 4/8-point scale. Keep cards compact, use rounded corners and subtle borders, and preserve touch targets of at least 48dp. Avoid repeated explanatory paragraphs; retain only lesson explanations, draft/review status, privacy and data-loss notices, and answer feedback.
 
-## Screen references
+## Shared navigation
 
-- [Today dashboard](design/today.png)
-- [Subject library](design/subjects.png)
-- [Quiz question](design/quiz.png)
-- [Answer feedback](design/feedback.png)
-- [Progress overview](design/progress.png)
+Keep exactly three bottom tabs: **Today**, **Learn**, and **Review**. Profile remains reachable from the top-right profile control. The bar remains fixed above Android's bottom gesture inset, with 24dp icons, 12sp Medium labels, Deep Moss for unselected content, Forest for selected content, and a Mint selected indicator. Use Android safe-drawing insets and scrollable content on long screens. Back navigation must return to the previous route rather than exit the app.
 
-These are visual concepts. Names, sample topic counts, and progress figures are illustrative, not real student data or confirmation of curriculum alignment.
+## Screen direction
+
+### Onboarding
+
+Use a lower-case serif “noor” wordmark, the headline “Small steps. Big knowledge.”, one student-at-study illustration, concise Form 3 / Malawi copy, a brief draft-content disclosure, and a prominent pill-shaped “Get started” action. Do not put essential text inside the illustration.
+
+### Today
+
+Keep Continue Learning as the primary action in a prominent Deep Moss card. Show lesson/topic context and actual topic lesson completion; never imply reading position that Noor does not track. If no lesson is saved, the card routes to Learn. A local search field searches saved lessons and topics only. “Today's path” is assembled from available saved lesson packs and displays actual completion state. A tappable flame indicator shows a local-day streak; only marking a lesson complete or finishing a quiz counts as study activity. Explain this rule and today's recorded state when tapped. Do not backfill activity history, sync it, or infer study from opening or abandoning content.
+
+### Learn
+
+Show Form 3 Biology and Physics subject cards, with topic counts and offline status derived from the actual local pack state. The offline banner must distinguish saved packs from packs that still need downloading. When a newer catalogue version exists, keep the older validated pack usable and make the update action and required space clear. Disable downloads only when available storage is known to be insufficient; if capacity cannot be determined, allow the attempt and explain recoverable failures. Keep draft/teacher-review status visible while the lesson packs remain drafts.
+
+### Lesson reading and completion
+
+Show subject/topic, lesson position, reading time, form, and the pack's actual curriculum status. Use readable paragraph spacing and relevant key-term cards. Add educational diagrams only when their labels and facts are supported by the lesson content; label schematic diagrams as not to scale. Keep “Lesson completed” visually quiet and “Practise this topic” as the prominent action.
+
+### Review and progress
+
+Review presents the private practice queue with visibly distinct sections. Topics due today use prominent Mint cards and a clear “Review now” action; other saved topics use compact white rows. Derive due state from the local schedule and current saved packs. Topic cards in the subject view use a proportional Mint fill based only on completed lessons / total lessons, plus a readable completion count. Keep quiz accuracy and review scheduling as separate data. Values at 0%, intermediate completion, and 100% must render accurately.
+
+### Quick Check
+
+Use a focused question layout with visible position/progress, large answer targets, clear selected/correct states, explanatory feedback, and a prominent next action.
+
+### Profile and settings
+
+Show the learner's selected form and four actual local summary stats in a compact 2 × 2 grid: lessons complete, practice accuracy, practice sessions, and topics due. Accuracy is “—” until questions have been answered. Preserve controls for saved packs, text scaling, privacy, app version, and deliberate progress deletion. Do not duplicate the removed Progress screen's per-topic dashboard.
+
+## Data and content safeguards
+
+Never hardcode progress, download state, topic/session counts, or quiz accuracy. Use singular/plural labels dynamically. All current lesson packs are draft content awaiting teacher review; disclose that status wherever students open the content. Lesson and topic search works only on locally saved content so it remains useful offline.

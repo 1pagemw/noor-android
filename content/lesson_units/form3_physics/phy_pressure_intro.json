@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "phy_pressure",
+  "topicTitle": "Pressure",
+  "topicDescription": "Pressure as force per unit area and pressure in fluids.",
+  "lesson": {
+    "id": "phy_pressure_intro",
+    "title": "Understanding pressure",
+    "readTimeMinutes": 5,
+    "sections": [
+      {
+        "heading": "Force and area",
+        "body": "Pressure is the normal force acting per unit area: pressure = force ÷ area. Its SI unit is the pascal (Pa), equal to one newton per square metre. For the same force, a smaller contact area produces a greater pressure. This helps explain why a sharp blade cuts more easily than a blunt one."
+      },
+      {
+        "heading": "Pressure in liquids",
+        "body": "Pressure in a liquid increases with depth because more liquid is above the point. For a liquid of density ρ at depth h, the pressure due to the liquid is p = ρgh, where g is gravitational field strength. This expression gives gauge pressure; total pressure can also include pressure at the surface."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Pressure",
+        "definition": "Normal force per unit area, measured in pascals."
+      },
+      {
+        "term": "Pascal",
+        "definition": "The SI unit of pressure: one newton per square metre."
+      },
+      {
+        "term": "Gauge pressure",
+        "definition": "Pressure measured relative to the surrounding atmospheric pressure."
+      }
+    ],
+    "questions": [
+      {
+        "id": "phy_pressure_q1",
+        "prompt": "A force of 20 N acts on an area of 4 m². What pressure is produced?",
+        "options": [
+          "5 Pa",
+          "16 Pa",
+          "24 Pa",
+          "80 Pa"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "Pressure = force ÷ area = 20 N ÷ 4 m² = 5 N/m², or 5 Pa."
+      },
+      {
+        "id": "phy_pressure_q2",
+        "prompt": "What happens to liquid pressure as depth increases?",
+        "options": [
+          "It generally increases",
+          "It becomes zero",
+          "It always stays the same",
+          "It changes into force"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "Deeper points have more liquid above them, so the pressure due to the liquid is greater."
+      }
+    ]
+  }
+}

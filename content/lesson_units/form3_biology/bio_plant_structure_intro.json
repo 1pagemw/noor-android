@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_biology",
+  "form": 3,
+  "subject": "Biology",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "bio_plant_structure",
+  "topicTitle": "Plant structure",
+  "topicDescription": "How roots, stems, leaves, and stomata are adapted to their roles.",
+  "lesson": {
+    "id": "bio_plant_structure_intro",
+    "title": "How plant parts are organised",
+    "readTimeMinutes": 5,
+    "sections": [
+      {
+        "heading": "Roots and stems",
+        "body": "Roots anchor a plant and absorb water and mineral ions. Root-hair cells have long extensions that increase the surface area available for absorption. Stems support leaves and flowers and contain transport tissues. Xylem carries water and mineral ions mainly from roots towards the rest of the plant; phloem transports dissolved sugars to places where they are needed or stored."
+      },
+      {
+        "heading": "Leaves and gas exchange",
+        "body": "A leaf is broad and usually thin, helping it capture light and allowing gases to diffuse over short distances. Stomata are pores, often more numerous on the lower leaf surface. Guard cells change shape to open or close each pore, regulating gas exchange and water loss."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Root hair",
+        "definition": "A root-cell extension that increases the surface area for absorbing water and mineral ions."
+      },
+      {
+        "term": "Xylem",
+        "definition": "Plant tissue that conducts water and mineral ions."
+      },
+      {
+        "term": "Stoma",
+        "definition": "A pore in a leaf surface controlled by guard cells."
+      }
+    ],
+    "questions": [
+      {
+        "id": "bio_plant_structure_q1",
+        "prompt": "How does a root-hair cell help a plant?",
+        "options": [
+          "It increases the surface area for absorption",
+          "It makes glucose using light",
+          "It carries sugars to the roots",
+          "It opens the stomata"
+        ],
+        "correctOptionIndex": 0,
+        "explanation": "The long extension increases surface area, helping the root absorb water and mineral ions from the soil."
+      },
+      {
+        "id": "bio_plant_structure_q2",
+        "prompt": "Which tissue conducts water from the roots?",
+        "options": [
+          "Phloem",
+          "Xylem",
+          "Epidermis",
+          "Guard cells"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Xylem conducts water and mineral ions through the plant."
+      }
+    ]
+  }
+}

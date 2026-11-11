@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "phy_gas_laws",
+  "topicTitle": "Gas laws",
+  "topicDescription": "How gas pressure, volume, and temperature are related under stated conditions.",
+  "lesson": {
+    "id": "phy_gas_laws_intro",
+    "title": "Pressure, volume, and temperature of gases",
+    "readTimeMinutes": 6,
+    "sections": [
+      {
+        "heading": "Boyle's law",
+        "body": "For a fixed amount of gas at constant temperature, pressure is inversely proportional to volume. If the volume is halved, the pressure doubles, provided the gas remains at the same temperature. This relationship can be written pV = constant for that fixed sample and temperature."
+      },
+      {
+        "heading": "Charles's law and kelvins",
+        "body": "For a fixed amount of gas at constant pressure, volume is proportional to its absolute temperature. Use kelvins, not degrees Celsius, in this relationship: V/T = constant. These simple gas-law relationships apply under their stated conditions and are useful models for many classroom problems."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Boyle's law",
+        "definition": "For a fixed amount of gas at constant temperature, pressure is inversely proportional to volume."
+      },
+      {
+        "term": "Absolute temperature",
+        "definition": "Temperature measured from absolute zero, using the kelvin scale."
+      },
+      {
+        "term": "Fixed amount of gas",
+        "definition": "A sample whose number of gas particles does not change during the comparison."
+      }
+    ],
+    "questions": [
+      {
+        "id": "phy_gas_laws_q1",
+        "prompt": "At constant temperature, what happens to gas pressure if the volume is reduced to half?",
+        "options": [
+          "It is halved",
+          "It doubles",
+          "It stays exactly the same",
+          "It becomes zero"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Boyle's law says pressure is inversely proportional to volume for a fixed gas sample at constant temperature."
+      },
+      {
+        "id": "phy_gas_laws_q2",
+        "prompt": "Which temperature scale should be used in a simple Charles's law calculation?",
+        "options": [
+          "Degrees Celsius",
+          "Kelvins",
+          "Degrees Fahrenheit",
+          "Any scale without conversion"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Charles's law uses absolute temperature, measured in kelvins."
+      }
+    ]
+  }
+}

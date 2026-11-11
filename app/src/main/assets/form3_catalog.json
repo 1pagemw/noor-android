@@ -1,0 +1,37 @@
+{
+  "catalogVersion": 1,
+  "packs": [
+    {
+      "id": "form3_biology",
+      "title": "Form 3 Biology",
+      "subject": "Biology",
+      "form": 3,
+      "description": "Six starter topics from cells to ecosystems.",
+      "topicCount": 6,
+      "contentVersion": 1,
+      "sha256": "2974904bc47cfa9665c3db67b2907de81a06321860050fb84ad7f7659f59e62a",
+      "sizeBytes": 13936,
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/packs/form3_biology.json",
+        "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/packs/form3_biology.json"
+      ],
+      "curriculumStatus": "Draft — local teacher review needed"
+    },
+    {
+      "id": "form3_physics",
+      "title": "Form 3 Physics",
+      "subject": "Physics",
+      "form": 3,
+      "description": "Seven starter topics from measurements to vectors.",
+      "topicCount": 7,
+      "contentVersion": 1,
+      "sha256": "a618c0a8c07886f00fad986b2231327026032c7df295b15716ae2173154d6244",
+      "sizeBytes": 15535,
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/1pagemw/noor-android/feature/android-scaffold/content/packs/form3_physics.json",
+        "https://raw.githubusercontent.com/1pagemw/noor-android/main/content/packs/form3_physics.json"
+      ],
+      "curriculumStatus": "Draft — local teacher review needed"
+    }
+  ]
+}

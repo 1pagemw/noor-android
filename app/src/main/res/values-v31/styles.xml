@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.Noor" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:statusBarColor">#F6F3EA</item>
+        <item name="android:navigationBarColor">#F6F3EA</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowSplashScreenBackground">#F6F3EA</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_noor_sprout</item>
+    </style>
+</resources>

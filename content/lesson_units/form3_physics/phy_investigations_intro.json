@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "packId": "form3_physics",
+  "form": 3,
+  "subject": "Physics",
+  "language": "en",
+  "contentVersion": 1,
+  "curriculumStatus": "Draft — local teacher review needed",
+  "topicId": "phy_investigations",
+  "topicTitle": "Scientific investigations",
+  "topicDescription": "Fair tests, variables, repeated readings, tables, and graphs.",
+  "lesson": {
+    "id": "phy_investigations_intro",
+    "title": "Planning a fair test",
+    "readTimeMinutes": 5,
+    "sections": [
+      {
+        "heading": "Variables",
+        "body": "A scientific investigation begins with a question that can be tested. The independent variable is the factor deliberately changed. The dependent variable is measured. Control variables are kept the same so that the effect of the independent variable can be judged fairly."
+      },
+      {
+        "heading": "Recording evidence",
+        "body": "Use a results table with headings and units. Repeat measurements where practical; repeated readings help reveal random variation and make an average more useful. Choose a graph that fits the data, label both axes with quantities and units, and use a suitable scale. Describe what the evidence shows without claiming more than the measurements support."
+      }
+    ],
+    "keyTerms": [
+      {
+        "term": "Independent variable",
+        "definition": "The factor deliberately changed in an investigation."
+      },
+      {
+        "term": "Dependent variable",
+        "definition": "The measured result that may change when the independent variable changes."
+      },
+      {
+        "term": "Control variable",
+        "definition": "A factor kept the same to make a comparison fair."
+      }
+    ],
+    "questions": [
+      {
+        "id": "phy_investigations_q1",
+        "prompt": "A student changes the length of a wire and measures its resistance. What is the independent variable?",
+        "options": [
+          "Resistance",
+          "Wire length",
+          "The balance used",
+          "The graph scale"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "The independent variable is the factor deliberately changed: the wire length."
+      },
+      {
+        "id": "phy_investigations_q2",
+        "prompt": "Why repeat a measurement when practical?",
+        "options": [
+          "To make the unit disappear",
+          "To identify variation and improve confidence in the result",
+          "To guarantee every result is identical",
+          "To change the independent variable"
+        ],
+        "correctOptionIndex": 1,
+        "explanation": "Repeated readings help identify random variation and support a more reliable summary, such as an average."
+      }
+    ]
+  }
+}
