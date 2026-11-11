@@ -80,4 +80,41 @@ class PackFileInstallerTest {
             directory.deleteRecursively()
         }
     }
+
+    @Test
+    fun deleteAllArtifactsRemovesDestinationBackupAndBothTemporaryFiles() {
+        val directory = Files.createTempDirectory("noor-pack-delete").toFile()
+        try {
+            val destination = File(directory, "biology.json").apply { writeText("installed") }
+            File(directory, "biology.json.bak").writeText("backup")
+            File(directory, "biology.json.tmp").writeText("partial")
+            File(directory, "biology.json.migration.tmp").writeText("migration")
+
+            PackFileInstaller().deleteAllArtifacts(destination)
+
+            assertFalse(destination.exists())
+            assertFalse(File(directory, "biology.json.bak").exists())
+            assertFalse(File(directory, "biology.json.tmp").exists())
+            assertFalse(File(directory, "biology.json.migration.tmp").exists())
+            PackFileInstaller().recover(destination)
+            assertFalse("Deleted pack must not be restored by recovery", destination.exists())
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun deleteAllArtifactsIsANoOpWhenNoArtifactsExist() {
+        val directory = Files.createTempDirectory("noor-pack-delete-empty").toFile()
+        try {
+            val destination = File(directory, "biology.json")
+
+            PackFileInstaller().deleteAllArtifacts(destination)
+
+            assertFalse(destination.exists())
+            assertEquals(emptyList<String>(), directory.list()?.toList().orEmpty())
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
 }

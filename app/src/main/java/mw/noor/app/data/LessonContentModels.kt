@@ -136,6 +136,7 @@ object LessonContentJsonParser {
                 require(lesson.sizeBytes > 0)
                 require(lesson.sha256.matches(Regex("[a-f0-9]{64}")))
                 require(lesson.sourceUrls.isNotEmpty())
+                require(lesson.sourceUrls.all { it.startsWith("https://") }) { "Lesson source URLs must use HTTPS." }
             }
         }
         return LessonContentIndex(root.getInt("catalogVersion"), subjects)

@@ -71,7 +71,7 @@ object ContentJsonParser {
         val packs = JSONObject(raw).getJSONArray("packs")
         return (0 until packs.length()).map { index ->
             val item = packs.getJSONObject(index)
-            ContentCatalogEntry(
+            val entry = ContentCatalogEntry(
                 id = item.getString("id"),
                 title = item.getString("title"),
                 subject = item.getString("subject"),
@@ -84,6 +84,10 @@ object ContentJsonParser {
                 sourceUrls = item.getJSONArray("sourceUrls").toStringList(),
                 curriculumStatus = item.getString("curriculumStatus"),
             )
+            require(entry.sourceUrls.isNotEmpty() && entry.sourceUrls.all { it.startsWith("https://") }) {
+                "Catalogue source URLs must use HTTPS."
+            }
+            entry
         }
     }
 

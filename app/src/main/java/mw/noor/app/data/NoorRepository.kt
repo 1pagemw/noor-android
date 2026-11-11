@@ -3,6 +3,7 @@ package mw.noor.app.data
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import mw.noor.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -72,16 +73,11 @@ class NoorRepository(context: Context) {
 
     fun loadLesson(entry: LessonIndexEntry): ContentLesson? {
         migrateLegacyPack(entry.packId)
-        val file = lessonFile(entry)
-        if (!file.isFile) return null
         return loadStoredPayload(entry)?.lesson
     }
 
-    fun deleteLesson(entry: LessonIndexEntry): Boolean {
-        val file = lessonFile(entry)
-        packFileInstaller.recover(file)
-        return !file.exists() || file.delete()
-    }
+    fun deleteLesson(entry: LessonIndexEntry): Boolean =
+        runCatching { packFileInstaller.deleteAllArtifacts(lessonFile(entry)) }.isSuccess
 
     suspend fun downloadLesson(
         entry: LessonIndexEntry,
@@ -93,6 +89,7 @@ class NoorRepository(context: Context) {
         }
         var lastError: Throwable? = null
         for (sourceUrl in entry.sourceUrls) {
+            require(sourceUrl.startsWith("https://")) { "Content sources must use HTTPS." }
             var temporaryFile: File? = null
             var connection: HttpURLConnection? = null
             try {
@@ -100,11 +97,12 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.3")
+                    setRequestProperty("User-Agent", "Noor-Android/${BuildConfig.VERSION_NAME}")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
                 activeConnection.connect()
+                check(activeConnection.url.protocol == "https") { "Content source must stay on HTTPS after redirects." }
                 val response = activeConnection.responseCode
                 check(response in 200..299) { "Server returned HTTP $response" }
                 val contentLength = activeConnection.contentLengthLong
@@ -190,6 +188,7 @@ class NoorRepository(context: Context) {
         }
         var lastError: Throwable? = null
         for (sourceUrl in entry.sourceUrls) {
+            require(sourceUrl.startsWith("https://")) { "Content sources must use HTTPS." }
             var temporaryFile: File? = null
             var connection: HttpURLConnection? = null
             try {
@@ -197,11 +196,12 @@ class NoorRepository(context: Context) {
                     connectTimeout = 15_000
                     readTimeout = 30_000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Noor-Android/0.4.3")
+                    setRequestProperty("User-Agent", "Noor-Android/${BuildConfig.VERSION_NAME}")
                     instanceFollowRedirects = true
                 }
                 connection = activeConnection
                 activeConnection.connect()
+                check(activeConnection.url.protocol == "https") { "Content source must stay on HTTPS after redirects." }
                 val response = activeConnection.responseCode
                 check(response in 200..299) { "Server returned HTTP $response" }
                 val contentLength = activeConnection.contentLengthLong
@@ -259,47 +259,48 @@ class NoorRepository(context: Context) {
         throw IllegalStateException(message, lastError)
     }
 
-    fun deletePack(entry: ContentCatalogEntry): Boolean {
-        return packFile(entry.id).let { !it.exists() || it.delete() }
-    }
+    fun deletePack(entry: ContentCatalogEntry): Boolean =
+        runCatching { packFileInstaller.deleteAllArtifacts(packFile(entry.id)) }.isSuccess
 
-    @Synchronized
     fun migrateLegacyPacks() {
-        lessonIndex.subjects.forEach { migrateLegacyPack(it.id) }
+        synchronized(NoorFileGate.lock) {
+            lessonIndex.subjects.forEach { migrateLegacyPack(it.id) }
+        }
     }
 
-    @Synchronized
     fun migrateLegacyPack(packId: String) {
-        val subject = lessonIndex.subject(packId) ?: return
-        val catalogEntry = catalog.firstOrNull { it.id == packId } ?: return
-        val legacyFile = packFile(packId)
-        val legacyBackup = File(legacyFile.parentFile, "${legacyFile.name}.bak")
-        val candidate = listOf(legacyFile, legacyBackup)
-            .mapNotNull { file -> readLegacyPackCandidate(file, subject, catalogEntry) }
-            .maxWithOrNull(compareBy<LegacyPackCandidate> { it.pack.contentVersion }.thenBy { it.file == legacyFile })
-            ?: return
-        // Restore the ordinary backup-only crash case through the installer. If a damaged main
-        // file and a valid backup coexist, leave both untouched while using the validated backup.
-        if (candidate.file == legacyBackup && !legacyFile.exists()) packFileInstaller.recover(legacyFile)
+        synchronized(NoorFileGate.lock) {
+            val subject = lessonIndex.subject(packId) ?: return
+            val catalogEntry = catalog.firstOrNull { it.id == packId } ?: return
+            val legacyFile = packFile(packId)
+            val legacyBackup = File(legacyFile.parentFile, "${legacyFile.name}.bak")
+            val candidate = listOf(legacyFile, legacyBackup)
+                .mapNotNull { file -> readLegacyPackCandidate(file, subject, catalogEntry) }
+                .maxWithOrNull(compareBy<LegacyPackCandidate> { it.pack.contentVersion }.thenBy { it.file == legacyFile })
+                ?: return
+            // Restore the ordinary backup-only crash case through the installer. If a damaged main
+            // file and a valid backup coexist, leave both untouched while using the validated backup.
+            if (candidate.file == legacyBackup && !legacyFile.exists()) packFileInstaller.recover(legacyFile)
 
-        subject.lessons.forEach { entry ->
-            val destination = lessonFile(entry)
-            if (loadStoredPayload(entry) != null) return@forEach
-            runCatching {
-                val payloadJson = LessonContentJsonParser.payloadFromLegacyPack(candidate.rawPack, entry)
-                val payload = LessonContentJsonParser.parsePayload(payloadJson)
-                validatePayload(entry, payload, allowOlderVersion = true)
-                val staged = File(lessonsDirectory, "${entry.packId}__${entry.lessonId}.migration.tmp")
-                FileOutputStream(staged).use { output ->
-                    output.write(payloadJson.toByteArray(Charsets.UTF_8))
-                    output.fd.sync()
+            subject.lessons.forEach { entry ->
+                val destination = lessonFile(entry)
+                if (loadStoredPayload(entry) != null) return@forEach
+                runCatching {
+                    val payloadJson = LessonContentJsonParser.payloadFromLegacyPack(candidate.rawPack, entry)
+                    val payload = LessonContentJsonParser.parsePayload(payloadJson)
+                    validatePayload(entry, payload, allowOlderVersion = true)
+                    val staged = File(lessonsDirectory, "${entry.packId}__${entry.lessonId}.migration.tmp")
+                    FileOutputStream(staged).use { output ->
+                        output.write(payloadJson.toByteArray(Charsets.UTF_8))
+                        output.fd.sync()
+                    }
+                    packFileInstaller.install(staged, destination)
                 }
-                packFileInstaller.install(staged, destination)
             }
-        }
-        if (subject.lessons.all { loadStoredPayload(it) != null }) {
-            legacyFile.delete()
-            legacyBackup.delete()
+            if (subject.lessons.all { loadStoredPayload(it) != null }) {
+                legacyFile.delete()
+                legacyBackup.delete()
+            }
         }
     }
 
@@ -381,7 +382,7 @@ class NoorRepository(context: Context) {
         preferences.edit()
             .putString(KEY_STREAK_LAST_ACTIVITY_DAY, today)
             .putInt(KEY_STREAK_DAYS, next.days)
-            .apply()
+            .commit()
         return next
     }
 
@@ -398,7 +399,7 @@ class NoorRepository(context: Context) {
         val editor = preferences.edit().putStringSet(KEY_COMPLETED_LESSONS, completed)
         if (offlineCompleted.isEmpty()) editor.remove(KEY_OFFLINE_COMPLETED_LESSONS)
         else editor.putStringSet(KEY_OFFLINE_COMPLETED_LESSONS, offlineCompleted)
-        editor.apply()
+        editor.commit()
     }
 
     fun saveLastLesson(lastLesson: LastLesson) {
@@ -432,7 +433,10 @@ class NoorRepository(context: Context) {
             .put("lastScorePercent", (score * 100f).toInt())
             .put("nextReviewAtMillis", nextReviewAt)
         root.put(topicId, updated)
-        preferences.edit().putString(KEY_TOPIC_STATS, root.toString()).apply()
+        preferences.edit()
+            .putString(KEY_TOPIC_STATS, root.toString())
+            .putString(KEY_TOPIC_STATS_BACKUP, root.toString())
+            .commit()
     }
 
     fun topicProgress(topicId: String): TopicProgress? {
@@ -492,6 +496,7 @@ class NoorRepository(context: Context) {
             .remove(KEY_COMPLETED_LESSONS)
             .remove(KEY_OFFLINE_COMPLETED_LESSONS)
             .remove(KEY_TOPIC_STATS)
+            .remove(KEY_TOPIC_STATS_BACKUP)
             .remove(KEY_LAST_PACK)
             .remove(KEY_LAST_TOPIC)
             .remove(KEY_LAST_LESSON)
@@ -500,9 +505,13 @@ class NoorRepository(context: Context) {
             .apply()
     }
 
-    private fun readTopicStats(): JSONObject = runCatching {
-        JSONObject(preferences.getString(KEY_TOPIC_STATS, "{}") ?: "{}")
-    }.getOrDefault(JSONObject())
+    private fun readTopicStats(): JSONObject {
+        runCatching { JSONObject(preferences.getString(KEY_TOPIC_STATS, "{}") ?: "{}") }
+            .getOrNull()?.let { return it }
+        runCatching { JSONObject(preferences.getString(KEY_TOPIC_STATS_BACKUP, "{}") ?: "{}") }
+            .getOrNull()?.let { return it }
+        return JSONObject()
+    }
 
     private fun localDayKey(nowMillis: Long): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(nowMillis))
@@ -548,6 +557,7 @@ class NoorRepository(context: Context) {
         private const val KEY_COMPLETED_LESSONS = "completed_lessons"
         private const val KEY_OFFLINE_COMPLETED_LESSONS = "offline_completed_lessons"
         private const val KEY_TOPIC_STATS = "topic_stats"
+        private const val KEY_TOPIC_STATS_BACKUP = "topic_stats_backup"
         private const val KEY_LAST_PACK = "last_pack"
         private const val KEY_LAST_TOPIC = "last_topic"
         private const val KEY_LAST_LESSON = "last_lesson"
