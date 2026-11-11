@@ -6,9 +6,12 @@ import android.content.SharedPreferences
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import mw.noor.app.QuizQuestion
@@ -110,15 +113,9 @@ class LearningFlowStateTest {
             sourceUrls = listOf("https://example.test/next.json"),
             order = 1,
         )
-        val previousLesson = nextLesson.copy(
-            topicId = "previous-topic",
-            topicTitle = "Previous topic",
-            lessonId = "flow-test-previous-lesson",
-            title = "Previous lesson title",
-            order = 0,
-        )
         var openedNextLessonId: String? = null
-        var openedPreviousLessonId: String? = null
+        var backCount = 0
+        var finishedResult: Pair<Int, Int>? = null
 
         composeRule.setContent {
             MaterialTheme {
@@ -126,12 +123,10 @@ class LearningFlowStateTest {
                     pack = pack,
                     topic = topic,
                     repository = repository,
-                    onBack = {},
-                    onFinished = { _, _ -> },
+                    onBack = { backCount += 1 },
+                    onFinished = { correct, total -> finishedResult = correct to total },
                     onOpenNextLesson = { openedNextLessonId = it.lessonId },
-                    onOpenPreviousLesson = { openedPreviousLessonId = it.lessonId },
                     nextLesson = nextLesson,
-                    previousLesson = previousLesson,
                     onProgressChanged = {},
                     cachedLessonCount = 2,
                     totalLessonCount = 2,
@@ -143,18 +138,130 @@ class LearningFlowStateTest {
         composeRule.onNodeWithText("Check answer").performClick()
         composeRule.onNodeWithText("See results").performClick()
         composeRule.onNodeWithText("0%").assertIsDisplayed()
-        composeRule.onNodeWithText("1 lesson complete.").assertIsDisplayed()
-        composeRule.onNodeWithText("Up next").assertIsDisplayed()
-        composeRule.onNodeWithText("Previous lesson").performClick()
-        composeRule.onNodeWithText("Next lesson").performClick()
+        composeRule.onNodeWithText("Keep going! Review the lesson and try again.").assertIsDisplayed()
+        composeRule.onNodeWithText("Review recommended").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Go over key concepts").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("1 lesson complete.").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Up next").performScrollTo().assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithText("0 of 1 correct").fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithContentDescription("Practice passed").fetchSemanticsNodes().size)
+        composeRule.onNodeWithText("Review recommended").performScrollTo().performClick()
+        composeRule.onNodeWithText("Next lesson title").performScrollTo().performClick()
+        composeRule.onNodeWithText("View subject topics").performScrollTo().performClick()
+        composeRule.onNodeWithText("Close lesson").performScrollTo().performClick()
         composeRule.runOnIdle {
             assertEquals("flow-test-next-lesson", openedNextLessonId)
-            assertEquals("flow-test-previous-lesson", openedPreviousLessonId)
+            assertEquals(2, backCount)
+            assertEquals(0 to 1, finishedResult)
             assertTrue("Completion must be separate from quiz accuracy", "flow-test-lesson" in repository.completedLessonIds())
             assertFalse("A lesson without quiz questions must stay incomplete", "flow-test-empty-lesson" in repository.completedLessonIds())
             assertEquals(0, repository.topicProgress(topic.id)?.lastScorePercent ?: -1)
             repository.clearProgress()
         }
+    }
+
+    @Test
+    fun passingHighScoreQuizShowsTrophyWithoutReviewButton() {
+        val repository = isolatedRepository("quiz-pass")
+        repository.clearProgress()
+        val question = QuizQuestion(
+            prompt = "Which option is correct?",
+            options = listOf("Wrong answer", "Correct answer"),
+            correctOptionIndex = 1,
+            id = "flow-test-pass-question",
+            explanation = "The second option is correct.",
+        )
+        val lesson = ContentLesson(
+            id = "flow-test-pass-lesson",
+            title = "Test lesson",
+            readTimeMinutes = 1,
+            sections = emptyList(),
+            keyTerms = emptyList(),
+            questions = listOf(question),
+        )
+        val topic = ContentTopic("flow-test-pass-topic", "Test topic", "", listOf(lesson))
+        val pack = ContentPack("flow-test-pass-pack", 3, "Biology", "en", 1, "provisional", listOf(topic))
+
+        composeRule.setContent {
+            MaterialTheme {
+                QuizScreen(
+                    pack = pack,
+                    topic = topic,
+                    repository = repository,
+                    onBack = {},
+                    onFinished = { _, _ -> },
+                    onOpenNextLesson = {},
+                    nextLesson = null,
+                    onProgressChanged = {},
+                    cachedLessonCount = 1,
+                    totalLessonCount = 1,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Correct answer").performClick()
+        composeRule.onNodeWithText("Check answer").performClick()
+        composeRule.onNodeWithText("See results").performClick()
+        composeRule.onNodeWithText("100%").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Practice passed").assertIsDisplayed()
+        composeRule.onNodeWithText("Strong work! You've got this topic down.").assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithText("Review recommended").fetchSemanticsNodes().size)
+        composeRule.onNodeWithText("View subject topics").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Close lesson").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun sixtyPercentQuizShowsGoodStartAndReviewRecommendationWithoutTrophy() {
+        val repository = isolatedRepository("quiz-good-start")
+        repository.clearProgress()
+        val questions = (1..5).map { questionNumber ->
+            QuizQuestion(
+                prompt = "Question $questionNumber",
+                options = listOf("Wrong option", "Correct option"),
+                correctOptionIndex = 1,
+                id = "flow-test-good-start-question-$questionNumber",
+                explanation = "Correct option is the right answer.",
+            )
+        }
+        val lesson = ContentLesson(
+            id = "flow-test-good-start-lesson",
+            title = "Test lesson",
+            readTimeMinutes = 1,
+            sections = emptyList(),
+            keyTerms = emptyList(),
+            questions = questions,
+        )
+        val topic = ContentTopic("flow-test-good-start-topic", "Test topic", "", listOf(lesson))
+        val pack = ContentPack("flow-test-good-start-pack", 3, "Biology", "en", 1, "provisional", listOf(topic))
+
+        composeRule.setContent {
+            MaterialTheme {
+                QuizScreen(
+                    pack = pack,
+                    topic = topic,
+                    repository = repository,
+                    onBack = {},
+                    onFinished = { _, _ -> },
+                    onOpenNextLesson = {},
+                    nextLesson = null,
+                    onProgressChanged = {},
+                    cachedLessonCount = 1,
+                    totalLessonCount = 1,
+                )
+            }
+        }
+
+        repeat(5) { questionNumber ->
+            val answer = if (questionNumber < 3) "Correct option" else "Wrong option"
+            composeRule.onNodeWithText(answer).performClick()
+            composeRule.onNodeWithText("Check answer").performClick()
+            composeRule.onNodeWithText(if (questionNumber == 4) "See results" else "Next question").performClick()
+        }
+
+        composeRule.onNodeWithText("60%").assertIsDisplayed()
+        composeRule.onNodeWithText("Good start! Keep practising to lock it in.").assertIsDisplayed()
+        composeRule.onNodeWithText("Review recommended").performScrollTo().assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithContentDescription("Practice passed").fetchSemanticsNodes().size)
     }
 
     private fun isolatedRepository(testName: String): NoorRepository {

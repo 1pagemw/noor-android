@@ -14,7 +14,6 @@ import mw.noor.app.ui.shouldUseNavigationRail
 import mw.noor.app.ui.responsiveGridColumnCount
 import mw.noor.app.ui.visibleSearchResults
 import mw.noor.app.ui.nextIncompleteLessonId
-import mw.noor.app.ui.previousLessonId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -71,16 +70,6 @@ class RouteAndProgressTest {
         assertEquals("d", nextIncompleteLessonId(order, "b", setOf("a", "b", "c")))
         assertNull(nextIncompleteLessonId(order, "d", setOf("a", "b", "c", "d")))
         assertEquals("a", nextIncompleteLessonId(order, null, emptySet()))
-    }
-
-    @Test
-    fun previousLessonFollowsCatalogueOrderWithoutWrapping() {
-        val order = listOf("a", "b", "c", "d")
-
-        assertEquals("b", previousLessonId(order, "c"))
-        assertNull(previousLessonId(order, "a"))
-        assertNull(previousLessonId(order, "unknown"))
-        assertNull(previousLessonId(order, null))
     }
 
     @Test

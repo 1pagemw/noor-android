@@ -9,4 +9,5 @@ object NoorColors {
     val Canvas = Color(0xFFF6F3EA)
     val Ink = Color(0xFF15181E)
     val Error = Color(0xFFC65A4A)
+    val Gold = Color(0xFFC9A227)
 }
