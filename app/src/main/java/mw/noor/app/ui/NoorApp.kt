@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -142,11 +143,23 @@ internal fun responsiveGridColumnCount(
     return columns.coerceIn(1, maxColumns)
 }
 
-private data class HomeLessonTarget(
+internal data class HomeLessonTarget(
     val entry: ContentCatalogEntry,
     val topic: ContentTopic,
     val lesson: ContentLesson,
 )
+
+internal fun todayHeroButtonLabel(
+    hasSavedLesson: Boolean,
+    savedLessonCompleted: Boolean,
+    savedTopicCompleted: Boolean,
+    targetTopicDiffers: Boolean,
+): String = when {
+    !hasSavedLesson -> "Start a lesson"
+    savedTopicCompleted && targetTopicDiffers -> "Start a topic"
+    savedLessonCompleted -> "Start a lesson"
+    else -> "Continue learning"
+}
 
 @Composable
 fun NoorApp() {
@@ -546,8 +559,17 @@ private fun TodayScreen(
     }
     val continueTarget = lastOpenedTarget?.takeUnless { it.lesson.id in completedLessons }
         ?: lessonTargets.firstOrNull { it.lesson.id !in completedLessons }
-    val startTarget = continueTarget ?: lessonTargets.firstOrNull()
-    val shouldLabelAsContinue = lastOpenedTarget != null || completedLessons.isNotEmpty()
+    val startTarget = continueTarget
+    val allLessonsComplete = lessonTargets.isNotEmpty() && lessonTargets.all { it.lesson.id in completedLessons }
+    val previousTopicCompleted = lastOpenedTarget?.topic?.lessons
+        ?.takeIf { it.isNotEmpty() }
+        ?.all { it.id in completedLessons } == true
+    val heroButtonLabel = todayHeroButtonLabel(
+        hasSavedLesson = lastOpenedTarget != null,
+        savedLessonCompleted = lastOpenedTarget?.lesson?.id?.let { it in completedLessons } == true,
+        savedTopicCompleted = previousTopicCompleted,
+        targetTopicDiffers = lastOpenedTarget != null && startTarget?.topic?.id != lastOpenedTarget.topic.id,
+    )
     val pathTargets = startTarget?.let { anchor ->
         val subjectLessons = lessonTargets.filter { it.entry.id == anchor.entry.id }
         val startAt = subjectLessons.indexOfFirst { it.lesson.id == anchor.lesson.id }.coerceAtLeast(0)
@@ -618,9 +640,10 @@ private fun TodayScreen(
         } else {
             TodayStudyOverview(
                 startTarget = startTarget,
-                isContinue = shouldLabelAsContinue,
                 completedLessons = completedLessons,
                 pathTargets = pathTargets,
+                allLessonsComplete = allLessonsComplete,
+                heroButtonLabel = heroButtonLabel,
                 onBrowse = { onSelectTab(NoorTab.LEARN.name) },
                 onOpenLesson = { target -> onContinueLesson(LastLesson(target.entry.id, target.topic.id, target.lesson.id)) },
             )
@@ -644,9 +667,10 @@ private fun TodayScreen(
 @Composable
 private fun TodayStudyOverview(
     startTarget: HomeLessonTarget?,
-    isContinue: Boolean,
     completedLessons: Set<String>,
     pathTargets: List<HomeLessonTarget>,
+    allLessonsComplete: Boolean,
+    heroButtonLabel: String,
     onBrowse: () -> Unit,
     onOpenLesson: (HomeLessonTarget) -> Unit,
 ) {
@@ -654,7 +678,7 @@ private fun TodayStudyOverview(
         if (maxWidth >= 900.dp) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Top) {
                 Box(Modifier.weight(1.1f)) {
-                    TodayHero(startTarget, isContinue, completedLessons, onBrowse, onOpenLesson)
+                    TodayHero(startTarget, completedLessons, allLessonsComplete, heroButtonLabel, onBrowse, onOpenLesson)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     TodayPathSection(pathTargets, completedLessons, onBrowse, onOpenLesson)
@@ -662,7 +686,7 @@ private fun TodayStudyOverview(
             }
         } else {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                TodayHero(startTarget, isContinue, completedLessons, onBrowse, onOpenLesson)
+                TodayHero(startTarget, completedLessons, allLessonsComplete, heroButtonLabel, onBrowse, onOpenLesson)
                 TodayPathSection(pathTargets, completedLessons, onBrowse, onOpenLesson)
             }
         }
@@ -672,19 +696,22 @@ private fun TodayStudyOverview(
 @Composable
 private fun TodayHero(
     target: HomeLessonTarget?,
-    isContinue: Boolean,
     completedLessons: Set<String>,
+    allLessonsComplete: Boolean,
+    buttonLabel: String,
     onBrowse: () -> Unit,
     onOpenLesson: (HomeLessonTarget) -> Unit,
 ) {
-    if (target == null) {
+    if (allLessonsComplete) {
+        AllLessonsCompleteCard(onBrowse)
+    } else if (target == null) {
         StartLearningCard(onBrowse)
     } else {
         ContinueLearningCard(
             target = target,
-            isContinue = isContinue,
             completedLessons = target.topic.lessons.count { it.id in completedLessons },
             totalLessons = target.topic.lessons.size,
+            buttonLabel = buttonLabel,
             onClick = { onOpenLesson(target) },
         )
     }
@@ -719,19 +746,22 @@ private fun TodayPathSection(
 }
 
 @Composable
-private fun ContinueLearningCard(target: HomeLessonTarget, isContinue: Boolean, completedLessons: Int, totalLessons: Int, onClick: () -> Unit) {
+internal fun ContinueLearningCard(
+    target: HomeLessonTarget,
+    completedLessons: Int,
+    totalLessons: Int,
+    buttonLabel: String,
+    onClick: () -> Unit,
+) {
     Card(
-        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = NoorColors.MossDark),
         shape = RoundedCornerShape(20.dp),
     ) {
-        Row(
+        Column(
             Modifier.fillMaxWidth().padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(if (isContinue) "CONTINUE LEARNING" else "START LEARNING", style = MaterialTheme.typography.labelSmall, color = NoorColors.Mint)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("${target.entry.subject} · ${target.topic.title}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
                 Text(target.lesson.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, maxLines = 2)
                 Text(
@@ -751,10 +781,41 @@ private fun ContinueLearningCard(target: HomeLessonTarget, isContinue: Boolean, 
                     trackColor = Color.White.copy(alpha = 0.22f),
                 )
             }
-            Surface(color = NoorColors.Mint, shape = CircleShape, modifier = Modifier.size(44.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Open lesson", tint = NoorColors.MossDark)
-                }
+            Button(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = NoorColors.MossDark),
+            ) {
+                Text(buttonLabel, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Outlined.ArrowForward, contentDescription = null)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllLessonsCompleteCard(onBrowse: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = NoorColors.MossDark),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("All lessons complete", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+            Text("Explore another topic or revisit your saved lessons.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+            Button(
+                onClick = onBrowse,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = NoorColors.MossDark),
+            ) {
+                Text("Browse topics", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Outlined.ArrowForward, contentDescription = null)
             }
         }
     }
@@ -773,7 +834,6 @@ private fun StartLearningCard(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("START LEARNING", style = MaterialTheme.typography.labelSmall, color = NoorColors.Mint)
                 Text("Choose a subject to begin", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                 Text("Lessons save individually when opened.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.88f))
             }
@@ -1406,9 +1466,7 @@ internal fun QuizScreen(
     onBack: () -> Unit,
     onFinished: (correct: Int, total: Int) -> Unit,
     onOpenNextLesson: (LessonIndexEntry) -> Unit,
-    onOpenPreviousLesson: (LessonIndexEntry) -> Unit,
     nextLesson: LessonIndexEntry?,
-    previousLesson: LessonIndexEntry?,
     onProgressChanged: () -> Unit,
     cachedLessonCount: Int,
     totalLessonCount: Int,
@@ -1431,10 +1489,27 @@ internal fun QuizScreen(
         return
     }
     if (showResult) {
+        val scorePercent = correctCount * 100 / questions.size
         ScreenColumn(Modifier.fillMaxSize(), safeDrawingInsets = true, maxContentWidth = 680.dp) {
             BackHeader("Practice complete", topic.title, onBack)
-            Text("${correctCount * 100 / questions.size}%", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
-            Text("$correctCount of ${questions.size} correct", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            if (scorePercent >= 80) {
+                Icon(
+                    Icons.Filled.EmojiEvents,
+                    contentDescription = "Practice passed",
+                    tint = NoorColors.Gold,
+                    modifier = Modifier.size(72.dp),
+                )
+            }
+            Text("$scorePercent%", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = NoorColors.Moss)
+            Text(
+                when {
+                    scorePercent >= 80 -> "Strong work! You've got this topic down."
+                    scorePercent >= 60 -> "Good start! Keep practising to lock it in."
+                    else -> "Keep going! Review the lesson and try again."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = NoorColors.MossDark,
+            )
             Text(
                 if (resultWasOffline) "You are offline. This result is saved on this phone; account sync is not available yet."
                 else "Result saved on this device.",
@@ -1442,29 +1517,20 @@ internal fun QuizScreen(
                 color = NoorColors.MossDark,
             )
             Text("${countLabel(lessonsCompletedByQuiz.size, "lesson")} complete.", style = MaterialTheme.typography.bodyMedium, color = NoorColors.MossDark)
-            StatusBadge(
-                text = when {
-                    correctCount * 100 / questions.size >= 80 -> "Strong work"
-                    correctCount * 100 / questions.size >= 60 -> "Good start"
-                    else -> "Review recommended"
-                },
-            )
-            if (nextLesson != null) {
-                InfoCard(title = "Up next", body = nextLesson.title, icon = Icons.Outlined.MenuBook)
-                PrimaryButton(text = "Next lesson", onClick = { onOpenNextLesson(nextLesson) })
-                TextButton(onClick = { onFinished(correctCount, questions.size) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text("Finish practice")
-                }
-            } else {
-                PrimaryButton(text = "Finish practice", onClick = { onFinished(correctCount, questions.size) })
+            if (scorePercent < 80) {
+                ReviewRecommendedButton(onClick = onBack)
             }
-            if (previousLesson != null) {
-                TextButton(
-                    onClick = { onOpenPreviousLesson(previousLesson) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) {
-                    Text("Previous lesson")
-                }
+            if (nextLesson != null) {
+                Text("Up next", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                NextLessonCard(nextLesson, onClick = { onOpenNextLesson(nextLesson) })
+            }
+            PrimaryLabeledButton(
+                text = "View subject topics",
+                sublabel = "Browse more lessons",
+                onClick = { onFinished(correctCount, questions.size) },
+            )
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text("Close lesson", color = NoorColors.MossDark)
             }
         }
         return
@@ -1685,6 +1751,57 @@ private fun StatusBadge(text: String) {
             style = MaterialTheme.typography.labelMedium,
             color = NoorColors.MossDark,
         )
+    }
+}
+
+@Composable
+private fun ReviewRecommendedButton(onClick: () -> Unit) {
+    Surface(onClick = onClick, color = Color.White, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, NoorColors.Moss)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Icons.Outlined.MenuBook, contentDescription = null, tint = NoorColors.Moss)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Review recommended", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = NoorColors.Moss)
+                Text("Go over key concepts", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+            }
+            Icon(Icons.Outlined.ArrowForward, contentDescription = null, tint = NoorColors.Moss)
+        }
+    }
+}
+
+@Composable
+private fun NextLessonCard(nextLesson: LessonIndexEntry, onClick: () -> Unit) {
+    Surface(onClick = onClick, color = NoorColors.Mint, shape = RoundedCornerShape(18.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(nextLesson.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = NoorColors.MossDark)
+                Text("${nextLesson.subject} · ${nextLesson.topicTitle}", style = MaterialTheme.typography.bodySmall, color = NoorColors.Ink.copy(alpha = 0.68f))
+            }
+            Icon(Icons.Outlined.ArrowForward, contentDescription = "Open ${nextLesson.title}", tint = NoorColors.Moss)
+        }
+    }
+}
+
+@Composable
+private fun PrimaryLabeledButton(text: String, sublabel: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        shape = RoundedCornerShape(percent = 50),
+        colors = ButtonDefaults.buttonColors(containerColor = NoorColors.Moss, contentColor = Color.White),
+    ) {
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+            Text(text, fontWeight = FontWeight.SemiBold)
+            Text(sublabel, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
+        }
+        Icon(Icons.Outlined.ArrowForward, contentDescription = null)
     }
 }
 

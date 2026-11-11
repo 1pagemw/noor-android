@@ -14,7 +14,7 @@ import mw.noor.app.ui.shouldUseNavigationRail
 import mw.noor.app.ui.responsiveGridColumnCount
 import mw.noor.app.ui.visibleSearchResults
 import mw.noor.app.ui.nextIncompleteLessonId
-import mw.noor.app.ui.previousLessonId
+import mw.noor.app.ui.todayHeroButtonLabel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -74,13 +74,11 @@ class RouteAndProgressTest {
     }
 
     @Test
-    fun previousLessonFollowsCatalogueOrderWithoutWrapping() {
-        val order = listOf("a", "b", "c", "d")
-
-        assertEquals("b", previousLessonId(order, "c"))
-        assertNull(previousLessonId(order, "a"))
-        assertNull(previousLessonId(order, "unknown"))
-        assertNull(previousLessonId(order, null))
+    fun todayHeroButtonCopyReflectsLessonAndTopicState() {
+        assertEquals("Start a lesson", todayHeroButtonLabel(hasSavedLesson = false, savedLessonCompleted = false, savedTopicCompleted = false, targetTopicDiffers = false))
+        assertEquals("Continue learning", todayHeroButtonLabel(hasSavedLesson = true, savedLessonCompleted = false, savedTopicCompleted = false, targetTopicDiffers = false))
+        assertEquals("Start a lesson", todayHeroButtonLabel(hasSavedLesson = true, savedLessonCompleted = true, savedTopicCompleted = false, targetTopicDiffers = false))
+        assertEquals("Start a topic", todayHeroButtonLabel(hasSavedLesson = true, savedLessonCompleted = true, savedTopicCompleted = true, targetTopicDiffers = true))
     }
 
     @Test
